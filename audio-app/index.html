@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BcgAudio - অডিও স্টোরিজ</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0a0a14; color: #fff; min-height: 100vh; padding: 16px 12px 100px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px 20px; border-bottom: 1px solid #2a2a3e; }
+        .header .user-info { display: flex; align-items: center; gap: 12px; }
+        .header .user-info .avatar { width: 40px; height: 40px; border-radius: 50%; background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #ffd700; font-size: 18px; overflow: hidden; }
+        .header .user-info .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header .user-info .name { font-size: 15px; font-weight: 600; }
+        .header .user-info .name small { display: block; font-size: 11px; color: #888; font-weight: 400; }
+        .header .token-badge { background: #1e1e32; padding: 6px 16px; border-radius: 30px; font-size: 18px; font-weight: 600; border: 1px solid #ffd70044; }
+        .header .token-badge i { color: #ffd700; margin-right: 6px; }
+        
+        .app-title { cursor: pointer; user-select: none; font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; transition: 0.15s; }
+        .app-title:active { transform: scale(0.95); }
+        
+        .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0; scrollbar-width: none; }
+        .filter-bar::-webkit-scrollbar { display: none; }
+        .filter-bar .filter-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #2a2a4a; background: transparent; color: #888; font-size: 13px; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .filter-bar .filter-btn.active { background: #ffd700; color: #0a0a14; border-color: #ffd700; }
+        
+        .story-card { background: #14142a; border-radius: 16px; padding: 14px; margin-top: 14px; border: 1px solid #28284a; display: flex; gap: 14px; align-items: center; }
+        .story-card .thumb { width: 70px; height: 70px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #ffd700; background: linear-gradient(135deg, #2a2a5a, #1a1a3a); position: relative; overflow: hidden; }
+        .story-card .thumb .age-badge { position: absolute; bottom: 0; right: 0; background: #d32f2f; font-size: 9px; padding: 2px 6px; border-radius: 4px 0 8px 0; font-weight: 700; }
+        .story-card .info { flex: 1; min-width: 0; }
+        .story-card .info h3 { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .story-card .info .author { font-size: 13px; color: #aaa; }
+        .story-card .info .meta { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+        .story-card .info .meta .tag { font-size: 10px; background: #2a2a4a; padding: 2px 10px; border-radius: 20px; color: #ccc; }
+        .story-card .info .meta .tag.adult { background: #d32f2f44; color: #ff6b6b; border: 1px solid #d32f2f55; }
+        .story-card .actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+        .story-card .actions button { border: none; border-radius: 30px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; background: #2a2a4a; color: #fff; }
+        .story-card .actions .download-btn { background: #ffd700; color: #0a0a14; }
+        .story-card .actions .downloaded-badge { background: #00c853; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; text-align: center; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: #1a1a2e; border-radius: 20px; padding: 28px 22px; max-width: 380px; width: 100%; border: 1px solid #ffd70033; }
+        .modal-box .thumb-big { width: 80px; height: 80px; border-radius: 16px; background: linear-gradient(135deg, #2a2a5a, #1a1a3a); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #ffd700; }
+        .modal-box h2 { text-align: center; font-size: 20px; }
+        .modal-box .author-modal { text-align: center; color: #aaa; font-size: 14px; }
+        .modal-box .cost-box { background: #12121f; padding: 14px; border-radius: 12px; margin: 16px 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-box .cost-box .price { font-size: 20px; font-weight: 700; color: #ffd700; }
+        .modal-box .cost-box .balance { font-size: 14px; color: #aaa; }
+        .modal-box .modal-buttons { display: flex; flex-direction: column; gap: 8px; }
+        .modal-box .modal-buttons .btn { padding: 12px; border: none; border-radius: 40px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; }
+        .modal-box .modal-buttons .btn-primary { background: linear-gradient(135deg, #f7971e, #ffd200); color: #0a0a14; }
+        .modal-box .modal-buttons .btn-secondary { background: transparent; color: #888; border: 1px solid #333; }
+        
+        .player-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a2e; border-top: 1px solid #2a2a4a; padding: 12px 16px; display: none; z-index: 100; }
+        .player-bar.show { display: block; }
+        .player-bar .player-info { display: flex; align-items: center; gap: 12px; }
+        .player-bar .player-info .mini-thumb { width: 44px; height: 44px; border-radius: 8px; background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #ffd700; flex-shrink: 0; }
+        .player-bar .player-info .player-meta { flex: 1; }
+        .player-bar .player-info .player-meta .p-title { font-size: 14px; font-weight: 600; }
+        .player-bar .player-info .player-meta .p-author { font-size: 12px; color: #888; }
+        .player-bar .player-controls { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+        .player-bar .player-controls .ctrl-btn { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+        .player-bar .close-player { position: absolute; top: 8px; right: 12px; background: none; border: none; color: #888; font-size: 18px; cursor: pointer; }
+        
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e1e32; color: #fff; padding: 12px 24px; border-radius: 40px; font-size: 14px; border: 1px solid #ffd70044; box-shadow: 0 10px 40px #00000088; z-index: 999; opacity: 0; transition: 0.3s; pointer-events: none; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        
+        .footer-link { margin-top: 24px; text-align: center; }
+        .footer-link a { color: #ffd700; text-decoration: none; font-weight: 600; font-size: 15px; }
+        .empty-state { text-align: center; padding: 40px 0; color: #666; }
+        
+        #adminPanel { display: none; }
+        #adminPanel.show { display: block; }
+        #userView.hide { display: none; }
+        
+        #adminLogin { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        #adminLogin.show { display: flex; }
+        .login-box { background: #1a1a2e; padding: 40px 30px; border-radius: 24px; border: 1px solid #2a2a4a; max-width: 400px; width: 100%; }
+        .login-box h2 { text-align: center; font-size: 24px; margin-bottom: 6px; }
+        .login-box .sub { text-align: center; color: #888; font-size: 14px; margin-bottom: 24px; }
+        .login-box .form-group { margin-bottom: 16px; }
+        .login-box label { display: block; font-size: 14px; color: #aaa; margin-bottom: 6px; }
+        .login-box input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid #2a2a4a; background: #12121f; color: #fff; font-size: 15px; outline: none; }
+        .login-box input:focus { border-color: #ffd700; }
+        .login-box .btn-login { width: 100%; padding: 14px; border: none; border-radius: 40px; background: linear-gradient(135deg, #f7971e, #ffd200); color: #0a0a14; font-size: 18px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        .login-box .btn-close { background: transparent; color: #888; border: none; font-size: 14px; cursor: pointer; margin-top: 12px; width: 100%; }
+        .login-box .error { color: #ff6b6b; font-size: 14px; text-align: center; margin-top: 12px; display: none; }
+        
+        .admin-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #2a2a3e; margin-bottom: 20px; }
+        .admin-header h1 { font-size: 22px; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .admin-header button { background: #d32f2f; color: #fff; border: none; padding: 8px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; }
+        
+        .admin-card { background: #1a1a2e; border-radius: 16px; padding: 20px; margin-top: 16px; border: 1px solid #2a2a44; }
+        .admin-card h3 { margin-bottom: 12px; color: #ffd700; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+        .admin-card .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .admin-card .stats .stat { background: #12121f; padding: 16px; border-radius: 12px; text-align: center; }
+        .admin-card .stats .stat .number { font-size: 28px; font-weight: 700; color: #ffd700; }
+        .admin-card .stats .stat .label { font-size: 13px; color: #888; margin-top: 4px; }
+        
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 14px; color: #aaa; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #2a2a4a; background: #12121f; color: #fff; font-size: 14px; outline: none; }
+        .form-group input:focus, .form-group select:focus { border-color: #ffd700; }
+        .form-group small { color: #666; font-size: 12px; }
+        
+        .btn-save { width: 100%; padding: 12px; border-radius: 40px; border: none; background: linear-gradient(135deg, #f7971e, #ffd200); color: #0a0a14; font-weight: 700; cursor: pointer; font-size: 15px; }
+        .btn-add { width: 100%; padding: 12px; border-radius: 12px; border: 2px dashed #ffd70044; background: transparent; color: #ffd700; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-cancel { width: 100%; padding: 10px; border-radius: 40px; border: 1px solid #333; background: transparent; color: #888; font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 6px; }
+        
+        .status-msg { margin-top: 10px; font-size: 14px; }
+        .status-success { color: #00c853; }
+        .status-error { color: #ff6b6b; }
+        
+        .task-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #12121f; border-radius: 10px; margin-bottom: 8px; border-left: 3px solid #ffd700; }
+        .task-row .task-info { flex: 1; }
+        .task-row .task-info strong { display: block; font-size: 14px; }
+        .task-row .task-info span { font-size: 12px; color: #888; }
+        .task-row .task-info .reward { color: #ffd700; }
+        .task-row .task-actions button { border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 4px; }
+        .task-row .btn-toggle { background: #2a2a4a; color: #fff; }
+        .task-row .btn-delete { background: #d32f2f; color: #fff; }
+        
+        @media (min-width: 500px) { body { max-width: 420px; margin: 0 auto; } }
+    </style>
+</head>
+<body>
+
+    <div id="userView">
+        <div class="header">
+            <div class="user-info" style="display:flex; align-items:center; gap:12px;">
+                <div class="avatar" id="userAvatar">👤</div>
+                <div class="name" id="userName">ইউজার<small>🟢 অনলাইন</small></div>
+            </div>
+            <div class="token-badge"><i class="fas fa-coins"></i> <span id="tokenDisplay">০</span></div>
+        </div>
+
+        <div style="text-align:center; margin: 12px 0;">
+            <div class="app-title" id="appTitle">🎧 BcgAudio</div>
+            <p style="font-size:11px; color:#666; margin-top:4px;">বাংলা চটি গল্প অডিও - 18+</p>
+        </div>
+
+        <div class="filter-bar" id="filterBar">
+            <button class="filter-btn active" data-filter="all">সব</button>
+            <button class="filter-btn" data-filter="রোমান্টিক">💕 রোমান্টিক</button>
+            <button class="filter-btn" data-filter="ইরোটিক">🔥 ইরোটিক</button>
+            <button class="filter-btn" data-filter="থ্রিলার">🔪 থ্রিলার</button>
+            <button class="filter-btn" data-filter="সাইকোলজিক্যাল">🧠 সাইকোলজিক্যাল</button>
+            <button class="filter-btn" data-filter="ডার্ক রোমান্স">🌑 ডার্ক রোমান্স</button>
+        </div>
+
+        <div id="storyList"><div style="text-align:center; padding:40px 0; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:30px; display:block; margin-bottom:10px;"></i>গল্প লোড হচ্ছে...</div></div>
+
+        <div class="footer-link"><a href="#" onclick="goToTokenBot()"><i class="fas fa-coins"></i> 🪙 টোকেন সংগ্রহ করুন</a></div>
+    </div>
+
+    <div id="adminPanel">
+        <div class="admin-header">
+            <h1>📊 BcgAudio Admin</h1>
+            <button onclick="adminLogout()">🚪 লগআউট</button>
+        </div>
+
+        <div class="admin-card">
+            <h3>📈 সারাংশ</h3>
+            <div class="stats">
+                <div class="stat"><div class="number" id="totalUsers">০</div><div class="label">মোট ইউজার</div></div>
+                <div class="stat"><div class="number" id="totalStories">০</div><div class="label">মোট গল্প</div></div>
+                <div class="stat"><div class="number" id="totalTokens">০</div><div class="label">মোট টোকেন</div></div>
+                <div class="stat"><div class="number" id="totalDownloads">০</div><div class="label">মোট ডাউনলোড</div></div>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <h3>🎨 অ্যাপ টাইটেল</h3>
+            <div class="form-group">
+                <label>📝 নতুন টাইটেল</label>
+                <input type="text" id="appTitleInput" placeholder="🎧 BcgAudio" />
+            </div>
+            <button class="btn-save" onclick="saveAppTitle()">💾 টাইটেল সেভ করুন</button>
+            <div id="appTitleStatus" class="status-msg"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>📢 টেলিগ্রাম চ্যানেল</h3>
+            <div class="form-group">
+                <label>🔑 চ্যানেল আইডি</label>
+                <input type="text" id="channelIdInput" placeholder="-1001234567890" />
+                <small>💡 @userinfobot থেকে নিন</small>
+            </div>
+            <div class="form-group">
+                <label>👤 চ্যানেল ইউজারনেম</label>
+                <input type="text" id="channelUsernameInput" placeholder="BCG_Database" />
+            </div>
+            <button class="btn-save" onclick="saveChannelSettings()">💾 চ্যানেল সেভ করুন</button>
+            <div id="channelStatus" class="status-msg"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>🔒 বাধ্যতামূলক চ্যানেল</h3>
+            <div class="form-group">
+                <label>📢 চ্যানেল লিংক</label>
+                <input type="url" id="requiredChannelLink" placeholder="https://t.me/BCG_Database" />
+            </div>
+            <div class="form-group">
+                <label>👤 চ্যানেল ইউজারনেম</label>
+                <input type="text" id="requiredChannelUsername" placeholder="BCG_Database" />
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="requiredChannelActive" checked /> ✅ বাধ্যতামূলক</label>
+            </div>
+            <button class="btn-save" onclick="saveRequiredChannel()">💾 সেভ করুন</button>
+            <div id="requiredChannelStatus" class="status-msg"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>📺 Monetag Zone ID</h3>
+            <div class="form-group">
+                <label>🔑 Zone ID</label>
+                <input type="text" id="monetagZoneId" placeholder="1234567" />
+            </div>
+            <button class="btn-save" onclick="saveZoneId()">💾 সেভ করুন</button>
+            <div id="zoneStatus" class="status-msg"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>📋 স্পনসর চ্যানেল টাস্ক</h3>
+            <div id="sponsorTaskList"><p style="color:#666; text-align:center; font-size:13px;">লোড হচ্ছে...</p></div>
+            <button class="btn-add" onclick="showAddTaskForm()">➕ নতুন স্পনসর চ্যানেল</button>
+            <div id="addTaskForm" style="display:none; margin-top:12px; padding:16px; background:#12121f; border-radius:12px;">
+                <div class="form-group"><label>📢 চ্যানেল লিংক</label><input type="url" id="newTaskLink" placeholder="https://t.me/sponsor" /></div>
+                <div class="form-group"><label>👤 ইউজারনেম</label><input type="text" id="newTaskUsername" placeholder="sponsor" /></div>
+                <div class="form-group"><label>🪙 টোকেন রিওয়ার্ড</label><input type="number" id="newTaskReward" placeholder="3" /></div>
+                <button class="btn-save" onclick="addSponsorTask()">➕ যোগ করুন</button>
+                <button class="btn-cancel" onclick="document.getElementById('addTaskForm').style.display='none'">❌ বাতিল</button>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <h3>➕ নতুন গল্প আপলোড</h3>
+            <div class="form-group"><label>📝 শিরোনাম</label><input type="text" id="storyTitle" placeholder="অধরা স্পর্শ" /></div>
+            <div class="form-group"><label>✍️ লেখক</label><input type="text" id="storyAuthor" placeholder="অনামিকা" /></div>
+            <div class="form-group">
+                <label>🏷️ ক্যাটাগরি</label>
+                <select id="storyCategory">
+                    <option>রোমান্টিক</option>
+                    <option>ইরোটিক</option>
+                    <option>থ্রিলার</option>
+                    <option>সাইকোলজিক্যাল</option>
+                    <option>ডার্ক রোমান্স</option>
+                </select>
+            </div>
+            <div class="form-group"><label>🪙 ডাউনলোড কস্ট</label><input type="number" id="storyCost" placeholder="5" /></div>
+            <div class="form-group"><label>🎵 অডিও ফাইল</label><input type="file" id="storyAudio" accept="audio/*" /></div>
+            <button class="btn-save" onclick="uploadStory()">🚀 গল্প আপলোড করুন</button>
+            <div id="uploadStatus" class="status-msg"></div>
+        </div>
+
+        <div style="height: 40px;"></div>
+    </div>
+
+    <div id="adminLogin">
+        <div class="login-box">
+            <h2>🔐 অ্যাডমিন লগইন</h2>
+            <p class="sub">BcgAudio প্যানেলে প্রবেশ করুন</p>
+            <div class="form-group">
+                <label>📧 ইমেইল</label>
+                <input type="email" id="adminEmail" placeholder="bcg332006@gmail.com" />
+            </div>
+            <div class="form-group">
+                <label>🔑 পাসওয়ার্ড</label>
+                <input type="password" id="adminPassword" placeholder="********" />
+            </div>
+            <button class="btn-login" onclick="adminLogin()">🔐 লগইন করুন</button>
+            <button class="btn-close" onclick="closeAdminLogin()">⏹️ বাতিল করুন</button>
+            <div id="loginError" class="error"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="spendModal">
+        <div class="modal-box">
+            <div class="thumb-big" id="modalThumb">অ</div>
+            <h2 id="modalTitle">অধরা স্পর্শ</h2>
+            <p class="author-modal" id="modalAuthor">✍️ অনামিকা</p>
+            <div class="cost-box"><span class="price">🪙 <span id="modalCost">৫</span> টোকেন</span><span class="balance">আপনার: <span id="modalBalance">১২</span> টোকেন</span></div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="modalConfirmBtn">⬇️ ডাউনলোড করুন</button>
+                <button class="btn btn-secondary" onclick="closeModal('spendModal')">⏹️ বাদ দিন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="noTokenModal">
+        <div class="modal-box" style="border-color:#d32f2f55;">
+            <div style="text-align:center; font-size:50px;">⛔</div>
+            <h2 style="text-align:center; color:#ff6b6b;">টোকেন কম!</h2>
+            <p style="text-align:center; color:#aaa; margin:8px 0 16px;">আপনার কাছে <span id="noTokenCurrent">০</span> টোকেন আছে।<br><span id="noTokenNeed">৫</span> টোকেন দরকার।</p>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="goToTokenBot()">🪙 টোকেন সংগ্রহ করুন</button>
+                <button class="btn btn-secondary" onclick="closeModal('noTokenModal')">⏹️ বাদ দিন</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="player-bar" id="playerBar">
+        <button class="close-player" onclick="closePlayer()">✕</button>
+        <div class="player-info">
+            <div class="mini-thumb" id="playerThumb">অ</div>
+            <div class="player-meta"><div class="p-title" id="playerTitle">গল্পের নাম</div><div class="p-author" id="playerAuthor">লেখক</div></div>
+        </div>
+        <div class="player-controls">
+            <button class="ctrl-btn" onclick="togglePlay()" id="playPauseBtn">▶️</button>
+            <span style="color:#888; font-size:12px;">⏱️ <span id="playerTime">০:০০</span></span>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">✅ সফল!</div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAANWd9AB3ixrmURkKx1iBabnhBSoUVnz8",
+            authDomain: "bcgaudio.firebaseapp.com",
+            projectId: "bcgaudio",
+            storageBucket: "bcgaudio.firebasestorage.app",
+            appId: "1:725786533955:web:73e6ffc43308cac7f8f4f6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let userId = null;
+        function getUserId() {
+            if (userId) return userId;
+            try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user) { userId = tg.initDataUnsafe.user.id.toString(); return userId; } } catch (e) {}
+            userId = 'demo_' + Date.now(); return userId;
+        }
+        function getUserName() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user) return tg.initDataUnsafe.user.first_name || 'ইউজার'; } catch (e) {} return 'ইউজার'; }
+        function getUserPhoto() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user && tg.initDataUnsafe.user.photo_url) return tg.initDataUnsafe.user.photo_url; } catch (e) {} return null; }
+
+        async function loadAppTitle() {
+            try {
+                const doc = await db.collection('settings').doc('appTitle').get();
+                if (doc.exists && doc.data().title) {
+                    document.getElementById('appTitle').textContent = doc.data().title;
+                    document.getElementById('appTitleInput').value = doc.data().title;
+                }
+            } catch (e) {}
+        }
+
+        let clickCount = 0, clickTimer = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            const titleEl = document.getElementById('appTitle');
+            if (titleEl) {
+                titleEl.addEventListener('click', function() {
+                    clickCount++;
+                    this.style.transform = 'scale(0.9)';
+                    setTimeout(() => { this.style.transform = 'scale(1)'; }, 150);
+                    clearTimeout(clickTimer);
+                    clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+                    if (clickCount >= 5) {
+                        clickCount = 0;
+                        showAdminLogin();
+                    }
+                });
+            }
+        });
+
+        function updateUserUI() {
+            const name = getUserName();
+            const photo = getUserPhoto();
+            document.getElementById('userName').innerHTML = name + '<small>🟢 অনলাইন</small>';
+            const avatar = document.getElementById('userAvatar');
+            if (photo) avatar.innerHTML = `<img src="${photo}" alt="avatar" />`;
+            else avatar.textContent = name.charAt(0).toUpperCase();
+        }
+        updateUserUI();
+
+        function showAdminLogin() { document.getElementById('adminLogin').classList.add('show'); }
+        function closeAdminLogin() { document.getElementById('adminLogin').classList.remove('show'); }
+
+        async function adminLogin() {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
+            const errorEl = document.getElementById('loginError');
+            if (!email || !password) { errorEl.textContent = '⛔ ইমেইল ও পাসওয়ার্ড দিন'; errorEl.style.display = 'block'; return; }
+            if (email !== 'bcg332006@gmail.com') { errorEl.textContent = '⛔ শুধু অ্যাডমিন লগইন করতে পারেন!'; errorEl.style.display = 'block'; return; }
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                closeAdminLogin();
+                document.getElementById('userView').classList.add('hide');
+                document.getElementById('adminPanel').classList.add('show');
+                loadAdminData();
+            } catch (error) {
+                errorEl.textContent = '⛔ ' + error.message;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        async function adminLogout() {
+            await auth.signOut();
+            document.getElementById('adminPanel').classList.remove('show');
+            document.getElementById('userView').classList.remove('hide');
+        }
+
+        async function loadAdminData() {
+            await loadDashboardStats();
+            await loadAppTitle();
+            await loadChannelSettings();
+            await loadRequiredChannel();
+            await loadZoneId();
+            await loadSponsorTasks();
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const usersSnap = await db.collection('users').get();
+                document.getElementById('totalUsers').textContent = usersSnap.size;
+                let totalTokens = 0;
+                usersSnap.forEach(d => { totalTokens += d.data().tokens || 0; });
+                document.getElementById('totalTokens').textContent = totalTokens;
+                const storiesSnap = await db.collection('stories').get();
+                document.getElementById('totalStories').textContent = storiesSnap.size;
+                let totalDownloads = 0;
+                storiesSnap.forEach(d => { totalDownloads += d.data().downloadCount || 0; });
+                document.getElementById('totalDownloads').textContent = totalDownloads;
+            } catch (e) {}
+        }
+
+        async function saveAppTitle() {
+            const title = document.getElementById('appTitleInput').value.trim();
+            const status = document.getElementById('appTitleStatus');
+            if (!title) { status.innerHTML = '<span class="status-error">⛔ টাইটেল দিন!</span>'; return; }
+            try {
+                await db.collection('settings').doc('appTitle').set({ title: title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                status.innerHTML = '<span class="status-success">✅ টাইটেল সেভ হয়েছে!</span>';
+                document.getElementById('appTitle').textContent = title;
+                showToast('✅ টাইটেল সেভ!');
+            } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        async function saveChannelSettings() {
+            const channelId = document.getElementById('channelIdInput').value.trim();
+            const username = document.getElementById('channelUsernameInput').value.trim();
+            const status = document.getElementById('channelStatus');
+            if (!channelId) { status.innerHTML = '<span class="status-error">⛔ চ্যানেল আইডি দিন!</span>'; return; }
+            try {
+                await db.collection('settings').doc('telegram').set({ channelId: channelId, channelUsername: username || '', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                status.innerHTML = '<span class="status-success">✅ চ্যানেল সেভ হয়েছে!</span>';
+                showToast('✅ চ্যানেল সেভ!');
+            } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        async function loadChannelSettings() {
+            try {
+                const doc = await db.collection('settings').doc('telegram').get();
+                if (doc.exists) {
+                    document.getElementById('channelIdInput').value = doc.data().channelId || '';
+                    document.getElementById('channelUsernameInput').value = doc.data().channelUsername || '';
+                }
+            } catch (e) {}
+        }
+
+        async function saveRequiredChannel() {
+            const link = document.getElementById('requiredChannelLink').value.trim();
+            const username = document.getElementById('requiredChannelUsername').value.trim();
+            const isActive = document.getElementById('requiredChannelActive').checked;
+            const status = document.getElementById('requiredChannelStatus');
+            if (!link) { status.innerHTML = '<span class="status-error">⛔ লিংক দিন!</span>'; return; }
+            try {
+                await db.collection('settings').doc('requiredChannel').set({ channelLink: link, channelUsername: username || '', isRequired: isActive, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                status.innerHTML = '<span class="status-success">✅ সেভ হয়েছে!</span>';
+                showToast('✅ বাধ্যতামূলক চ্যানেল সেভ!');
+            } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        async function loadRequiredChannel() {
+            try {
+                const doc = await db.collection('settings').doc('requiredChannel').get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('requiredChannelLink').value = data.channelLink || '';
+                    document.getElementById('requiredChannelUsername').value = data.channelUsername || '';
+                    document.getElementById('requiredChannelActive').checked = data.isRequired !== false;
+                }
+            } catch (e) {}
+        }
+
+        async function saveZoneId() {
+            const zoneId = document.getElementById('monetagZoneId').value.trim();
+            const status = document.getElementById('zoneStatus');
+            if (!zoneId) { status.innerHTML = '<span class="status-error">⛔ Zone ID দিন!</span>'; return; }
+            try {
+                await db.collection('settings').doc('monetag').set({ zoneId: zoneId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                status.innerHTML = '<span class="status-success">✅ Zone ID সেভ হয়েছে!</span>';
+                showToast('✅ Zone ID সেভ!');
+            } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        async function loadZoneId() {
+            try {
+                const doc = await db.collection('settings').doc('monetag').get();
+                if (doc.exists) document.getElementById('monetagZoneId').value = doc.data().zoneId || '';
+            } catch (e) {}
+        }
+
+        async function loadSponsorTasks() {
+            try {
+                const doc = await db.collection('settings').doc('sponsorTasks').get();
+                const container = document.getElementById('sponsorTaskList');
+                if (!doc.exists || !doc.data().tasks || doc.data().tasks.length === 0) {
+                    container.innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ কোনো স্পনসর টাস্ক নেই</p>';
+                    return;
+                }
+                const tasks = doc.data().tasks;
+                container.innerHTML = '';
+                tasks.forEach((task, index) => {
+                    container.innerHTML += `
+                        <div class="task-row">
+                            <div class="task-info">
+                                <strong>${task.channelUsername}</strong>
+                                <span>${task.channelLink}</span>
+                                <span class="reward">🪙 ${task.reward}</span>
+                                <span style="color:${task.isActive ? '#00c853' : '#d32f2f'}; margin-left:6px;">${task.isActive ? '✅' : '❌'}</span>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-toggle" onclick="toggleSponsorTask(${index})">${task.isActive ? '🔇' : '🔊'}</button>
+                                <button class="btn-delete" onclick="deleteSponsorTask(${index})">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {}
+        }
+
+        function showAddTaskForm() { document.getElementById('addTaskForm').style.display = 'block'; }
+
+        async function addSponsorTask() {
+            const link = document.getElementById('newTaskLink').value.trim();
+            const username = document.getElementById('newTaskUsername').value.trim();
+            const reward = parseInt(document.getElementById('newTaskReward').value);
+            if (!link || !reward) { alert('লিংক ও রিওয়ার্ড দিন!'); return; }
+            try {
+                const doc = await db.collection('settings').doc('sponsorTasks').get();
+                const tasks = doc.exists ? doc.data().tasks || [] : [];
+                tasks.push({ id: 'task_' + Date.now(), channelLink: link, channelUsername: username || 'নাম নেই', reward: reward, isActive: true, createdAt: new Date() });
+                await db.collection('settings').doc('sponsorTasks').set({ tasks }, { merge: true });
+                document.getElementById('addTaskForm').style.display = 'none';
+                document.getElementById('newTaskLink').value = '';
+                document.getElementById('newTaskUsername').value = '';
+                document.getElementById('newTaskReward').value = '';
+                loadSponsorTasks();
+                showToast('✅ টাস্ক যোগ!');
+            } catch (e) { alert('সমস্যা!'); }
+        }
+
+        async function toggleSponsorTask(index) {
+            try {
+                const doc = await db.collection('settings').doc('sponsorTasks').get();
+                const tasks = doc.data().tasks || [];
+                tasks[index].isActive = !tasks[index].isActive;
+                await db.collection('settings').doc('sponsorTasks').set({ tasks }, { merge: true });
+                loadSponsorTasks();
+            } catch (e) {}
+        }
+
+        async function deleteSponsorTask(index) {
+            if (!confirm('এই টাস্ক ডিলিট করবেন?')) return;
+            try {
+                const doc = await db.collection('settings').doc('sponsorTasks').get();
+                const tasks = doc.data().tasks || [];
+                tasks.splice(index, 1);
+                await db.collection('settings').doc('sponsorTasks').set({ tasks }, { merge: true });
+                loadSponsorTasks();
+                showToast('🗑️ ডিলিট!');
+            } catch (e) {}
+        }
+
+        async function uploadStory() {
+            const title = document.getElementById('storyTitle').value.trim();
+            const author = document.getElementById('storyAuthor').value.trim();
+            const category = document.getElementById('storyCategory').value;
+            const cost = parseInt(document.getElementById('storyCost').value) || 5;
+            const status = document.getElementById('uploadStatus');
+            if (!title || !author) { status.innerHTML = '<span class="status-error">⛔ শিরোনাম ও লেখক দিন!</span>'; return; }
+            try {
+                await db.collection('stories').add({
+                    title, author, category, cost,
+                    coverLetter: title.charAt(0),
+                    isAdult: true,
+                    isActive: true,
+                    duration: '১০:০০',
+                    downloadCount: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                status.innerHTML = '<span class="status-success">✅ গল্প আপলোড হয়েছে!</span>';
+                document.getElementById('storyTitle').value = '';
+                document.getElementById('storyAuthor').value = '';
+                document.getElementById('storyCost').value = '';
+                showToast('✅ গল্প আপলোড!');
+            } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        const DEMO_STORIES = [
+            { id: 'story1', title: 'অধরা স্পর্শ', author: 'অনামিকা', category: 'ইরোটিক', cost: 5, coverLetter: 'অ', isAdult: true, duration: '১০:০০' },
+            { id: 'story2', title: 'প্রথম স্পর্শ', author: 'রুদ্র', category: 'রোমান্টিক', cost: 4, coverLetter: 'প', isAdult: true, duration: '০৮:৩০' },
+            { id: 'story3', title: 'নিষিদ্ধ ভালোবাসা', author: 'সায়রা', category: 'ডার্ক রোমান্স', cost: 6, coverLetter: 'ন', isAdult: true, duration: '১২:১৫' },
+            { id: 'story4', title: 'রাতের অন্ধকারে', author: 'অরিন্দম', category: 'থ্রিলার', cost: 5, coverLetter: 'র', isAdult: true, duration: '০৯:৪৫' },
+            { id: 'story5', title: 'মন খারাপের গল্প', author: 'শ্রেয়া', category: 'রোমান্টিক', cost: 3, coverLetter: 'ম', isAdult: false, duration: '০৭:২০' }
+        ];
+        let allStories = [...DEMO_STORIES];
+        let downloadedStories = [];
+
+        async function loadStories(filter = 'all') {
+            const container = document.getElementById('storyList');
+            try { const userDoc = await db.collection('users').doc(getUserId()).get(); downloadedStories = userDoc.exists ? userDoc.data().downloadedStories || [] : []; } catch (e) { downloadedStories = []; }
+            let filtered = filter === 'all' ? allStories : allStories.filter(s => s.category === filter);
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-book-open" style="font-size:50px; color:#2a2a4a; display:block; margin-bottom:12px;"></i><p>এই ক্যাটাগরিতে কোনো গল্প নেই</p></div>`;
+                return;
+            }
+            container.innerHTML = '';
+            filtered.forEach(story => {
+                const isDownloaded = downloadedStories.includes(story.id);
+                const card = document.createElement('div');
+                card.className = 'story-card';
+                card.innerHTML = `
+                    <div class="thumb">${story.coverLetter}${story.isAdult ? '<span class="age-badge">18+</span>' : ''}</div>
+                    <div class="info"><h3>${story.title}</h3><div class="author">✍️ ${story.author}</div><div class="meta"><span class="tag">${story.category}</span>${story.isAdult ? '<span class="tag adult">🔞 18+</span>' : ''}<span class="tag">🪙 ${story.cost}</span><span class="tag">⏱️ ${story.duration}</span></div></div>
+                    <div class="actions">${isDownloaded ? `<span class="downloaded-badge">✅ ডাউনলোড</span>` : `<button class="download-btn" onclick="openSpendModal('${story.id}')">⬇️ ডাউনলোড</button>`}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                loadStories(this.dataset.filter);
+            });
+        });
+
+        async function getUserTokens() { try { const doc = await db.collection('users').doc(getUserId()).get(); return doc.exists ? doc.data().tokens || 0 : 0; } catch (e) { return 0; } }
+        async function spendTokens(amount) { const ref = db.collection('users').doc(getUserId()); const doc = await ref.get(); const current = doc.exists ? doc.data().tokens || 0 : 0; if (current < amount) return false; await ref.update({ tokens: firebase.firestore.FieldValue.increment(-amount) }); return true; }
+        async function updateUI() { const tokens = await getUserTokens(); document.getElementById('tokenDisplay').textContent = tokens; }
+
+        window.openSpendModal = async function(storyId) {
+            const story = allStories.find(s => s.id === storyId);
+            if (!story) return;
+            const tokens = await getUserTokens();
+            document.getElementById('modalThumb').textContent = story.coverLetter;
+            document.getElementById('modalTitle').textContent = story.title;
+            document.getElementById('modalAuthor').textContent = `✍️ ${story.author}`;
+            document.getElementById('modalCost').textContent = story.cost;
+            document.getElementById('modalBalance').textContent = tokens;
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            if (tokens >= story.cost) {
+                confirmBtn.textContent = `⬇️ ${story.cost} টোকেন খরচ করুন`;
+                confirmBtn.style.background = 'linear-gradient(135deg, #f7971e, #ffd200)';
+                confirmBtn.style.color = '#0a0a14';
+                confirmBtn.onclick = () => confirmDownload(storyId);
+            } else {
+                confirmBtn.textContent = `⛔ টোকেন কম (${tokens}/${story.cost})`;
+                confirmBtn.style.background = '#d32f2f66';
+                confirmBtn.style.color = '#ff6b6b';
+                confirmBtn.onclick = () => { closeModal('spendModal'); showNoTokenModal(story.cost - tokens); };
+            }
+            document.getElementById('spendModal').classList.add('show');
+        };
+
+        window.confirmDownload = async function(storyId) {
+            const story = allStories.find(s => s.id === storyId);
+            if (!story) return;
+            const success = await spendTokens(story.cost);
+            if (success) {
+                const ref = db.collection('users').doc(getUserId());
+                await ref.update({ downloadedStories: firebase.firestore.FieldValue.arrayUnion(storyId) }, { merge: true });
+                closeModal('spendModal');
+                showToast(`✅ "${story.title}" ডাউনলোড হয়েছে!`);
+                await updateUI();
+                loadStories(document.querySelector('.filter-btn.active').dataset.filter);
+            } else { closeModal('spendModal'); showNoTokenModal(story.cost); }
+        };
+
+        window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
+        function showNoTokenModal(need) { document.getElementById('noTokenCurrent').textContent = '০'; document.getElementById('noTokenNeed').textContent = need; document.getElementById('noTokenModal').classList.add('show'); }
+
+        let isPlaying = false, currentPlayingStory = null;
+        window.togglePlay = function() { if (!currentPlayingStory) return; isPlaying = !isPlaying; document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️' : '▶️'; };
+        window.closePlayer = function() { document.getElementById('playerBar').classList.remove('show'); isPlaying = false; };
+
+        window.goToTokenBot = function() {
+            closeModal('noTokenModal');
+            if (window.Telegram?.WebApp) Telegram.WebApp.openTelegramLink('https://t.me/BCGtokens_bot');
+            else window.open('https://t.me/BCGtokens_bot', '_blank');
+        };
+
+        function showToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._timer); el._timer = setTimeout(() => el.classList.remove('show'), 2800); }
+
+        async function init() {
+            await loadAppTitle();
+            await updateUI();
+            loadStories('all');
+            if (window.Telegram?.WebApp) { window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
+            console.log('✅ Audio App + Admin Ready!');
+        }
+        init();
+    </script>
+</body>
+</html>
