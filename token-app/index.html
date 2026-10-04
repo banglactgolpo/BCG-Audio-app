@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BcgAudio - টোকেন মাস্টার</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0a0a14; color: #fff; min-height: 100vh; padding: 16px 12px 100px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px 20px; border-bottom: 1px solid #2a2a3e; }
+        .header .user-info { display: flex; align-items: center; gap: 12px; }
+        .header .user-info .avatar { width: 40px; height: 40px; border-radius: 50%; background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #ffd700; font-size: 18px; overflow: hidden; }
+        .header .user-info .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header .user-info .name { font-size: 15px; font-weight: 600; }
+        .header .user-info .name small { display: block; font-size: 11px; color: #888; font-weight: 400; }
+        .header .token-badge { background: #1e1e32; padding: 6px 16px; border-radius: 30px; font-size: 18px; font-weight: 600; border: 1px solid #ffd70044; }
+        .header .token-badge i { color: #ffd700; margin-right: 6px; }
+        
+        .app-title { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .card { background: #1a1a2e; border-radius: 16px; padding: 20px 16px; margin-top: 18px; border: 1px solid #2a2a44; }
+        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: #ffd700; font-size: 20px; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border: none; border-radius: 40px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #f7971e, #ffd200); color: #0a0a14; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 30px #ffd70055; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: #2a2a44; color: #fff; }
+        
+        .task-item { display: flex; align-items: center; justify-content: space-between; background: #12121f; padding: 12px 14px; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid #ffd700; }
+        .task-item .info .title { font-size: 14px; font-weight: 500; }
+        .task-item .info .reward { font-size: 12px; color: #ffd700; }
+        .task-item .btn-small { padding: 6px 14px; border-radius: 20px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; background: #2a2a44; color: #fff; }
+        .task-item .btn-small.done { background: #00c853; color: #fff; }
+        
+        .game-area { background: #12121f; border-radius: 16px; padding: 30px 20px; text-align: center; cursor: pointer; transition: 0.15s; border: 2px dashed #ffd70044; user-select: none; }
+        .game-area:active { transform: scale(0.97); background: #1a1a2e; }
+        .game-area .tap-icon { font-size: 50px; display: block; margin-bottom: 6px; }
+        .game-area .tap-progress { font-size: 14px; color: #aaa; margin-top: 6px; }
+        
+        .bonus-box { display: flex; align-items: center; justify-content: space-between; background: #12121f; padding: 14px 16px; border-radius: 12px; }
+        .bonus-box .left .day { font-size: 13px; color: #aaa; }
+        
+        .ref-link-box { display: flex; gap: 10px; background: #12121f; padding: 10px 14px; border-radius: 10px; margin-top: 8px; }
+        .ref-link-box input { flex: 1; background: transparent; border: none; color: #fff; font-size: 13px; outline: none; }
+        .ref-link-box button { background: #ffd700; color: #0a0a14; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        
+        .rank-item { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-bottom: 1px solid #1a1a2e; }
+        .rank-item .pos { font-weight: 700; width: 30px; color: #ffd700; }
+        .rank-item .name { flex: 1; }
+        .rank-item .tokens { color: #ffd700; font-weight: 600; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: #1a1a2e; padding: 30px 24px; border-radius: 20px; border: 1px solid #ffd70033; max-width: 380px; width: 100%; text-align: center; }
+        .modal-box .icon { font-size: 60px; margin-bottom: 12px; }
+        .modal-box h2 { font-size: 22px; margin-bottom: 8px; }
+        .modal-box p { color: #aaa; font-size: 14px; margin-bottom: 16px; line-height: 1.6; }
+        
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e1e32; color: #fff; padding: 12px 24px; border-radius: 40px; font-size: 14px; border: 1px solid #ffd70044; box-shadow: 0 10px 40px #00000088; z-index: 999; opacity: 0; transition: 0.3s; pointer-events: none; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        
+        .footer-link { margin-top: 24px; text-align: center; }
+        .footer-link a { color: #ffd700; text-decoration: none; font-weight: 600; font-size: 15px; }
+        
+        .sponsor-task-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #12121f; border-radius: 12px; margin-bottom: 8px; border-left: 3px solid #ffd700; }
+        .sponsor-task-item.completed { border-left-color: #00c853; }
+        .sponsor-task-item .btn-join { background: #ffd700; color: #0a0a14; border: none; padding: 4px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .sponsor-task-item .status { color: #00c853; font-size: 13px; font-weight: 600; }
+        
+        @media (min-width: 500px) { body { max-width: 420px; margin: 0 auto; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="user-info" style="display:flex; align-items:center; gap:12px;">
+            <div class="avatar" id="userAvatar">👤</div>
+            <div class="name" id="userName">ইউজার<small>🟢 অনলাইন</small></div>
+        </div>
+        <div class="token-badge"><i class="fas fa-coins"></i> <span id="tokenDisplay">০</span></div>
+    </div>
+
+    <div style="text-align:center; margin: 12px 0;">
+        <div class="app-title" id="appTitle">🎧 BcgAudio</div>
+        <p style="font-size:11px; color:#666; margin-top:4px;">বাংলা চটি গল্প অডিও</p>
+    </div>
+
+    <div class="modal-overlay" id="joinChannelModal">
+        <div class="modal-box">
+            <div class="icon">📢</div>
+            <h2>চ্যানেলে জয়েন করুন</h2>
+            <p>অ্যাপ ব্যবহার করতে <strong id="requiredChannelName">BcgAudio</strong> চ্যানেলে জয়েন হতে হবে।</p>
+            <a id="joinChannelLink" href="#" target="_blank" class="btn btn-primary" style="text-decoration:none;">📢 চ্যানেলে জয়েন করুন</a>
+            <button class="btn btn-secondary" onclick="verifyChannelJoin()">✅ জয়েন করেছি</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-gift"></i> ডেইলি বোনাস</div>
+        <div class="bonus-box">
+            <div class="left">
+                <span style="font-weight:600;">+৫ টোকেন</span>
+                <span class="day" id="bonusStatus">আজ দাবি করা হয়নি</span>
+            </div>
+            <button class="btn btn-primary" style="width:auto; padding:10px 24px;" onclick="claimDailyBonus()">
+                <i class="fas fa-hand-holding-heart"></i> নিন
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-video"></i> অ্যাড দেখে টোকেন নিন</div>
+        <button class="btn btn-primary" id="watchAdBtn" onclick="watchAd()">
+            <i class="fas fa-play-circle"></i> অ্যাড দেখুন (+২ টোকেন)
+        </button>
+        <div style="text-align:center; margin-top:8px; font-size:13px; color:#888;">
+            আজ <span id="adCountDisplay">০</span>/<span id="maxAdDisplay">২০</span> টি অ্যাড দেখেছেন
+        </div>
+        <div style="margin-top:12px; background:#12121f; min-height:70px; display:flex; align-items:center; justify-content:center; color:#666; border:1px dashed #333; border-radius:12px;">
+            📺 Monetag অ্যাড এখানে লোড হবে
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-list-check"></i> দৈনিক টাস্ক</div>
+        <div class="task-item" id="task1">
+            <div class="info"><span class="title">📢 চ্যানেল সাবস্ক্রাইব</span><span class="reward">+৩ 🪙</span></div>
+            <button class="btn-small" onclick="completeTask('task1',3)">কমপ্লিট</button>
+        </div>
+        <div class="task-item" id="task2">
+            <div class="info"><span class="title">📤 গল্প শেয়ার করুন</span><span class="reward">+২ 🪙</span></div>
+            <button class="btn-small" onclick="completeTask('task2',2)">কমপ্লিট</button>
+        </div>
+        <div class="task-item" id="task3">
+            <div class="info"><span class="title">⭐ অ্যাপ রেট দিন</span><span class="reward">+৫ 🪙</span></div>
+            <button class="btn-small" onclick="completeTask('task3',5)">কমপ্লিট</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-bullhorn"></i> স্পনসর চ্যানেল</div>
+        <div id="sponsorTaskList"><p style="color:#666; text-align:center; font-size:13px;">লোড হচ্ছে...</p></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-gamepad"></i> ট্যাপ করুন</div>
+        <div class="game-area" onclick="handleTap()">
+            <span class="tap-icon">👆</span>
+            <div style="font-size:18px; font-weight:600;">ট্যাপ করুন</div>
+            <div class="tap-progress">প্রগ্রেস: <span id="tapProgress">০</span>/১০</div>
+        </div>
+        <p style="font-size:13px; color:#888; text-align:center; margin-top:6px;">১০ ট্যাপে ১ টোকেন!</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-users"></i> বন্ধু আনুন</div>
+        <div class="ref-link-box">
+            <input type="text" id="refLink" readonly />
+            <button onclick="copyRefLink()"><i class="fas fa-copy"></i></button>
+        </div>
+        <p style="font-size:13px; color:#ffd700; margin-top:8px;">প্রতি রেফারেলে +১০ 🪙</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-trophy"></i> টপ ইউজার</div>
+        <div id="leaderboardList"><p style="color:#666; text-align:center; font-size:13px;">লোড হচ্ছে...</p></div>
+    </div>
+
+    <div class="footer-link">
+        <a href="#" onclick="goToAudioApp()"><i class="fas fa-headphones"></i> 🎧 অডিও অ্যাপে যান</a>
+    </div>
+
+    <div id="toast" class="toast">✅ টোকেন যোগ হয়েছে!</div>
+
+    <script>
+        // ============================================================
+        // 🔥 Firebase Config
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAANWd9AB3ixrmURkKx1iBabnhBSoUVnz8",
+            authDomain: "bcgaudio.firebaseapp.com",
+            projectId: "bcgaudio",
+            storageBucket: "bcgaudio.firebasestorage.app",
+            appId: "1:725786533955:web:73e6ffc43308cac7f8f4f6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ============================================================
+        // 🆔 ইউজার আইডি
+        // ============================================================
+        let userId = null;
+
+        function getUserId() {
+            if (userId) return userId;
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user) {
+                    userId = tg.initDataUnsafe.user.id.toString();
+                    return userId;
+                }
+            } catch (e) {}
+            userId = 'demo_' + Date.now();
+            return userId;
+        }
+
+        function getUserName() {
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user) return tg.initDataUnsafe.user.first_name || 'ইউজার';
+            } catch (e) {}
+            return 'ইউজার';
+        }
+
+        function getUserPhoto() {
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user && tg.initDataUnsafe.user.photo_url) {
+                    return tg.initDataUnsafe.user.photo_url;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        // ============================================================
+        // 🎯 টাইটেল লোড
+        // ============================================================
+        async function loadAppTitle() {
+            try {
+                const doc = await db.collection('settings').doc('appTitle').get();
+                if (doc.exists && doc.data().title) {
+                    document.getElementById('appTitle').textContent = doc.data().title;
+                }
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // 👤 ইউজার UI
+        // ============================================================
+        function updateUserUI() {
+            const name = getUserName();
+            const photo = getUserPhoto();
+            document.getElementById('userName').innerHTML = name + '<small>🟢 অনলাইন</small>';
+            const avatar = document.getElementById('userAvatar');
+            if (photo) avatar.innerHTML = `<img src="${photo}" alt="avatar" />`;
+            else avatar.textContent = name.charAt(0).toUpperCase();
+        }
+        updateUserUI();
+
+        // ============================================================
+        // 📦 টোকেন
+        // ============================================================
+        async function getUserTokens() {
+            try {
+                const doc = await db.collection('users').doc(getUserId()).get();
+                return doc.exists ? doc.data().tokens || 0 : 0;
+            } catch (e) { return 0; }
+        }
+
+        async function addTokens(amount) {
+            const ref = db.collection('users').doc(getUserId());
+            await ref.set({ tokens: firebase.firestore.FieldValue.increment(amount) }, { merge: true });
+            await updateUI();
+        }
+
+        async function updateUI() {
+            const tokens = await getUserTokens();
+            document.getElementById('tokenDisplay').textContent = tokens;
+            const adData = await getAdCount();
+            document.getElementById('adCountDisplay').textContent = adData.count;
+        }
+
+        // ============================================================
+        // 📊 অ্যাড কাউন্ট
+        // ============================================================
+        async function getAdCount() {
+            try {
+                const doc = await db.collection('users').doc(getUserId()).get();
+                const data = doc.exists ? doc.data() : {};
+                const today = new Date().toDateString();
+                if (data.lastAdDate !== today) return { count: 0, max: 20 };
+                return { count: data.dailyAdCount || 0, max: 20 };
+            } catch (e) { return { count: 0, max: 20 }; }
+        }
+
+        async function incrementAdCount() {
+            const ref = db.collection('users').doc(getUserId());
+            const today = new Date().toDateString();
+            await ref.set({
+                dailyAdCount: firebase.firestore.FieldValue.increment(1),
+                lastAdDate: today
+            }, { merge: true });
+        }
+
+        // ============================================================
+        // 🎯 ডেইলি বোনাস
+        // ============================================================
+        window.claimDailyBonus = async function() {
+            const ref = db.collection('users').doc(getUserId());
+            const doc = await ref.get();
+            const data = doc.exists ? doc.data() : {};
+            const today = new Date().toDateString();
+            if (data.lastBonus === today) {
+                showToast('⏳ আজকে বোনাস নেওয়া হয়েছে!');
+                return;
+            }
+            await addTokens(5);
+            await ref.set({ lastBonus: today }, { merge: true });
+            document.getElementById('bonusStatus').textContent = '✅ আজকে নেওয়া হয়েছে';
+            showToast('🎁 +৫ টোকেন বোনাস!');
+        };
+
+        // ============================================================
+        // 📺 অ্যাড ওয়াচ
+        // ============================================================
+        window.watchAd = async function() {
+            const adData = await getAdCount();
+            if (adData.count >= adData.max) {
+                showToast('⏳ আজকের অ্যাড লিমিট শেষ!');
+                return;
+            }
+            const canUse = await checkRequiredChannel();
+            if (!canUse) return;
+            showToast('📺 অ্যাড দেখানো হচ্ছে...');
+            setTimeout(async () => {
+                await addTokens(2);
+                await incrementAdCount();
+                const newData = await getAdCount();
+                document.getElementById('adCountDisplay').textContent = newData.count;
+                showToast(`🎬 +২ টোকেন! (আজ ${newData.count}/${newData.max})`);
+            }, 2000);
+        };
+
+        // ============================================================
+        // 📋 টাস্ক
+        // ============================================================
+        window.completeTask = async function(taskId, reward) {
+            const btn = document.querySelector(`#${taskId} .btn-small`);
+            if (btn.classList.contains('done')) {
+                showToast('⏳ টাস্ক আগেই কমপ্লিট!');
+                return;
+            }
+            btn.classList.add('done');
+            btn.textContent = '✅ ডোন';
+            await addTokens(reward);
+            showToast(`✅ +${reward} টোকেন!`);
+        };
+
+        // ============================================================
+        // 🎮 ট্যাপ
+        // ============================================================
+        let tapCount = 0;
+        window.handleTap = function() {
+            tapCount++;
+            document.getElementById('tapProgress').textContent = tapCount;
+            if (tapCount >= 10) {
+                tapCount = 0;
+                document.getElementById('tapProgress').textContent = '০';
+                addTokens(1);
+                showToast('🎮 +১ টোকেন!');
+            }
+        };
+
+        // ============================================================
+        // 🔗 রেফারেল
+        // ============================================================
+        window.copyRefLink = function() {
+            const input = document.getElementById('refLink');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            showToast('📋 কপি করা হয়েছে!');
+        };
+
+        // ============================================================
+        // 🎧 অডিও অ্যাপ
+        // ============================================================
+        window.goToAudioApp = function() {
+            if (window.Telegram?.WebApp) {
+                Telegram.WebApp.openTelegramLink('https://t.me/BCGaudio_bot');
+            } else {
+                window.open('https://t.me/BCGaudio_bot', '_blank');
+            }
+        };
+
+        // ============================================================
+        // 🍞 টোস্ট
+        // ============================================================
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => el.classList.remove('show'), 2500);
+        }
+
+        // ============================================================
+        // 📢 চ্যানেল চেক
+        // ============================================================
+        async function checkRequiredChannel() {
+            try {
+                const doc = await db.collection('settings').doc('requiredChannel').get();
+                if (!doc.exists || !doc.data().isRequired) return true;
+                const data = doc.data();
+                const userDoc = await db.collection('users').doc(getUserId()).get();
+                const userData = userDoc.exists ? userDoc.data() : {};
+                if (userData.joinedRequiredChannel) return true;
+                document.getElementById('requiredChannelName').textContent = data.channelUsername || 'BcgAudio';
+                document.getElementById('joinChannelLink').href = data.channelLink || '#';
+                document.getElementById('joinChannelModal').classList.add('show');
+                return false;
+            } catch (e) { return true; }
+        }
+
+        window.verifyChannelJoin = async function() {
+            const ref = db.collection('users').doc(getUserId());
+            await ref.set({ joinedRequiredChannel: true }, { merge: true });
+            document.getElementById('joinChannelModal').classList.remove('show');
+            showToast('✅ চ্যানেল জয়েন হয়েছে!');
+            loadSponsorTasks();
+        };
+
+        // ============================================================
+        // 📋 স্পনসর টাস্ক
+        // ============================================================
+        async function loadSponsorTasks() {
+            try {
+                const doc = await db.collection('settings').doc('sponsorTasks').get();
+                const container = document.getElementById('sponsorTaskList');
+                if (!doc.exists || !doc.data().tasks || doc.data().tasks.length === 0) {
+                    container.innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ কোনো স্পনসর টাস্ক নেই</p>';
+                    return;
+                }
+                const tasks = doc.data().tasks;
+                const userDoc = await db.collection('users').doc(getUserId()).get();
+                const completed = userDoc.exists ? userDoc.data().completedTasks || [] : [];
+                container.innerHTML = '';
+                tasks.forEach(task => {
+                    if (!task.isActive) return;
+                    const isCompleted = completed.includes(task.id);
+                    container.innerHTML += `
+                        <div class="sponsor-task-item ${isCompleted ? 'completed' : ''}">
+                            <div>
+                                <strong>📢 ${task.channelUsername || 'চ্যানেল'}</strong>
+                                <span style="color:#ffd700;">🪙 ${task.reward}</span>
+                            </div>
+                            ${isCompleted ? '<span class="status">✅ সম্পন্ন</span>' :
+                            `<button class="btn-join" onclick="joinSponsorChannel('${task.id}','${task.channelLink}',${task.reward})">জয়েন করুন</button>`}
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                document.getElementById('sponsorTaskList').innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ লোড সমস্যা</p>';
+            }
+        }
+
+        window.joinSponsorChannel = async function(taskId, channelLink, reward) {
+            window.open(channelLink, '_blank');
+            if (confirm('✅ চ্যানেল জয়েন করেছেন? টোকেন পাবেন!')) {
+                const ref = db.collection('users').doc(getUserId());
+                await ref.update({
+                    tokens: firebase.firestore.FieldValue.increment(reward),
+                    completedTasks: firebase.firestore.FieldValue.arrayUnion(taskId)
+                });
+                showToast(`✅ +${reward} টোকেন পেয়েছেন!`);
+                loadSponsorTasks();
+                updateUI();
+            }
+        };
+
+        // ============================================================
+        // 🏆 লিডারবোর্ড
+        // ============================================================
+        async function loadLeaderboard() {
+            try {
+                const snapshot = await db.collection('users').orderBy('tokens', 'desc').limit(10).get();
+                const container = document.getElementById('leaderboardList');
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ এখনো কোনো ইউজার নেই</p>';
+                    return;
+                }
+                const emojis = ['🥇', '🥈', '🥉'];
+                let html = '', i = 0;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const name = data.firstName || data.username || 'ইউজার';
+                    html += `<div class="rank-item"><span class="pos">${emojis[i] || (i+1)+'.'}</span><span class="name">${name}</span><span class="tokens">${data.tokens || 0}</span></div>`;
+                    i++;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                document.getElementById('leaderboardList').innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ লোড সমস্যা</p>';
+            }
+        }
+
+        // ============================================================
+        // 🚀 বুট
+        // ============================================================
+        async function init() {
+            await loadAppTitle();
+            await checkRequiredChannel();
+            await updateUI();
+            await loadSponsorTasks();
+            await loadLeaderboard();
+            document.getElementById('refLink').value = `https://t.me/BCGtokens_bot?start=ref_${getUserId()}`;
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.expand();
+            }
+            console.log('✅ Token App Ready!');
+        }
+        init();
+    </script>
+</body>
+</html>
