@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BcgAudio - অডিও স্টোরিজ</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -12,7 +13,7 @@
         body { background: #0a0a14; color: #fff; min-height: 100vh; padding: 16px 12px 100px; }
         
         .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 4px 20px; border-bottom: 1px solid #2a2a3e; }
-        .header .user-info { display: flex; align-items: center; gap: 12px; }
+        .header .user-info { display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .header .user-info .avatar { width: 40px; height: 40px; border-radius: 50%; background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #ffd700; font-size: 18px; overflow: hidden; }
         .header .user-info .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .header .user-info .name { font-size: 15px; font-weight: 600; }
@@ -22,6 +23,11 @@
         
         .app-title { cursor: pointer; user-select: none; font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #f7971e, #ffd200); -webkit-background-clip: text; -webkit-text-fill-color: transparent; transition: 0.15s; }
         .app-title:active { transform: scale(0.95); }
+        
+        .nav-tabs { display: flex; gap: 8px; margin: 16px 0; overflow-x: auto; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs .nav-btn { padding: 8px 18px; border-radius: 20px; border: 1px solid #2a2a4a; background: transparent; color: #888; font-size: 13px; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .nav-tabs .nav-btn.active { background: #ffd700; color: #0a0a14; border-color: #ffd700; }
         
         .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0; scrollbar-width: none; }
         .filter-bar::-webkit-scrollbar { display: none; }
@@ -40,8 +46,32 @@
         .story-card .actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
         .story-card .actions button { border: none; border-radius: 30px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; background: #2a2a4a; color: #fff; }
         .story-card .actions .download-btn { background: #ffd700; color: #0a0a14; }
+        .story-card .actions .fav-btn { background: transparent; color: #ff6b6b; font-size: 16px; padding: 2px; }
         .story-card .actions .downloaded-badge { background: #00c853; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; text-align: center; }
         
+        /* প্রোফাইল সেকশন */
+        .profile-section { display: none; }
+        .profile-section.show { display: block; }
+        .profile-card { background: #1a1a2e; border-radius: 20px; padding: 24px; margin-top: 16px; text-align: center; border: 1px solid #2a2a44; }
+        .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #f7971e, #ffd200); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #0a0a14; margin: 0 auto 12px; overflow: hidden; }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .profile-id { font-size: 12px; color: #888; margin-bottom: 12px; }
+        .profile-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+        .profile-stats .stat { background: #12121f; padding: 12px; border-radius: 12px; }
+        .profile-stats .stat .num { font-size: 20px; font-weight: 700; color: #ffd700; }
+        .profile-stats .stat .lbl { font-size: 11px; color: #888; margin-top: 2px; }
+        
+        .edit-name-box { display: flex; gap: 8px; margin-top: 16px; }
+        .edit-name-box input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid #2a2a4a; background: #12121f; color: #fff; font-size: 14px; outline: none; }
+        .edit-name-box input:focus { border-color: #ffd700; }
+        .edit-name-box button { padding: 12px 20px; border-radius: 12px; border: none; background: linear-gradient(135deg, #f7971e, #ffd200); color: #0a0a14; font-weight: 700; cursor: pointer; }
+        
+        .profile-tabs { display: flex; gap: 8px; margin: 20px 0 10px; }
+        .profile-tabs .p-tab { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #2a2a4a; background: transparent; color: #888; font-size: 13px; cursor: pointer; }
+        .profile-tabs .p-tab.active { background: #ffd700; color: #0a0a14; border-color: #ffd700; font-weight: 600; }
+        
+        /* মোডাল */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
         .modal-overlay.show { display: flex; }
         .modal-box { background: #1a1a2e; border-radius: 20px; padding: 28px 22px; max-width: 380px; width: 100%; border: 1px solid #ffd70033; }
@@ -140,6 +170,12 @@
         .settings-row label { font-size: 14px; color: #ccc; }
         .settings-row input { width: 80px; padding: 6px 10px; border-radius: 8px; border: 1px solid #2a2a4a; background: #0a0a14; color: #fff; font-size: 14px; text-align: center; }
         
+        .file-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #12121f; border-radius: 10px; margin-bottom: 8px; border-left: 3px solid #00c853; }
+        .file-row .file-info { flex: 1; min-width: 0; }
+        .file-row .file-info strong { display: block; font-size: 14px; }
+        .file-row .file-info span { font-size: 11px; color: #888; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-row .file-actions button { border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; margin-left: 4px; background: #ffd700; color: #0a0a14; font-weight: 600; }
+        
         @media (min-width: 500px) { body { max-width: 420px; margin: 0 auto; } }
     </style>
 </head>
@@ -148,25 +184,57 @@
     <!-- ========== ইউজার ভিউ ========== -->
     <div id="userView">
         <div class="header">
-            <div class="user-info" style="display:flex; align-items:center; gap:12px;">
+            <div class="user-info" onclick="showProfile()">
                 <div class="avatar" id="userAvatar">👤</div>
-                <div class="name" id="userName">ইউজার<small>🟢 অনলাইন</small></div>
+                <div class="name" id="userName">ইউজার<small>👤 প্রোফাইল</small></div>
             </div>
             <div class="token-badge"><i class="fas fa-coins"></i> <span id="tokenDisplay">০</span></div>
         </div>
 
-        <div style="text-align:center; margin: 12px 0;">
-            <div class="app-title" id="appTitle">🎧 BcgAudio</div>
-            <p style="font-size:11px; color:#666; margin-top:4px;">বাংলা চটি গল্প অডিও - 18+</p>
+        <!-- ===== হোম ===== -->
+        <div id="homeSection">
+            <div style="text-align:center; margin: 12px 0;">
+                <div class="app-title" id="appTitle">🎧 BcgAudio</div>
+                <p style="font-size:11px; color:#666; margin-top:4px;">বাংলা চটি গল্প অডিও - 18+</p>
+            </div>
+
+            <div class="filter-bar" id="filterBar">
+                <button class="filter-btn active" data-filter="all">সব</button>
+            </div>
+
+            <div id="storyList"><div style="text-align:center; padding:40px 0; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:30px; display:block; margin-bottom:10px;"></i>গল্প লোড হচ্ছে...</div></div>
+
+            <div class="footer-link"><a href="#" onclick="goToTokenBot()"><i class="fas fa-coins"></i> 🪙 টোকেন সংগ্রহ করুন</a></div>
         </div>
 
-        <div class="filter-bar" id="filterBar">
-            <button class="filter-btn active" data-filter="all">সব</button>
+        <!-- ===== প্রোফাইল ===== -->
+        <div id="profileSection" class="profile-section">
+            <div class="profile-card">
+                <div class="profile-avatar" id="profileAvatar">👤</div>
+                <div class="profile-name" id="profileName">ইউজার</div>
+                <div class="profile-id">🆔 ID: <span id="profileId">-</span></div>
+                
+                <div class="edit-name-box">
+                    <input type="text" id="editNameInput" placeholder="নাম পরিবর্তন করুন" />
+                    <button onclick="saveProfileName()">💾 সেভ</button>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="stat"><div class="num" id="pTokens">০</div><div class="lbl">টোকেন</div></div>
+                    <div class="stat"><div class="num" id="pDownloads">০</div><div class="lbl">ডাউনলোড</div></div>
+                    <div class="stat"><div class="num" id="pFavs">০</div><div class="lbl">ফেভারিট</div></div>
+                </div>
+            </div>
+            
+            <div class="profile-tabs">
+                <button class="p-tab active" onclick="showProfileTab('fav')">❤️ ফেভারিট</button>
+                <button class="p-tab" onclick="showProfileTab('down')">📥 ডাউনলোড</button>
+            </div>
+            
+            <div id="profileTabContent"></div>
+            
+            <button class="btn-cancel" style="margin-top:16px;" onclick="hideProfile()">← ফিরে যান</button>
         </div>
-
-        <div id="storyList"><div style="text-align:center; padding:40px 0; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:30px; display:block; margin-bottom:10px;"></i>গল্প লোড হচ্ছে...</div></div>
-
-        <div class="footer-link"><a href="#" onclick="goToTokenBot()"><i class="fas fa-coins"></i> 🪙 টোকেন সংগ্রহ করুন</a></div>
     </div>
 
     <!-- ========== অ্যাডমিন প্যানেল ========== -->
@@ -204,6 +272,13 @@
         </div>
 
         <div class="admin-card">
+            <h3>📁 File Manager</h3>
+            <p style="color:#888;font-size:13px;margin-bottom:12px;">চ্যানেলের অডিও লিস্ট দেখুন এবং file_id কপি করুন।</p>
+            <button class="btn-save" onclick="loadChannelFiles()">🔄 Refresh Files</button>
+            <div id="channelFilesList" style="margin-top:12px;"><p style="color:#666;text-align:center;font-size:13px;">Refresh ক্লিক করুন</p></div>
+        </div>
+
+        <div class="admin-card">
             <h3>📚 গল্প ম্যানেজমেন্ট</h3>
             <div id="storyManageList"><p style="color:#666;text-align:center;font-size:13px;">লোড হচ্ছে...</p></div>
         </div>
@@ -215,7 +290,7 @@
             <div class="form-group"><label>🏷️ ক্যাটাগরি</label><select id="storyCategory"></select></div>
             <div class="form-group"><label>🪙 ডাউনলোড কস্ট</label><input type="number" id="storyCost" placeholder="5" /></div>
             <div class="form-group"><label>⏱️ সময়কাল</label><input type="text" id="storyDuration" placeholder="১০:০০" /></div>
-            <div class="form-group"><label>🎵 অডিও ফাইল</label><input type="file" id="storyAudio" accept="audio/*" /></div>
+            <div class="form-group"><label>📁 Telegram File ID</label><input type="text" id="storyFileId" placeholder="CQACAgQAAxkDAA..." /></div>
             <button class="btn-save" onclick="uploadStory()">🚀 গল্প আপলোড করুন</button>
             <div id="uploadStatus" class="status-msg"></div>
         </div>
@@ -228,29 +303,20 @@
 
         <div class="admin-card">
             <h3>🎁 ডেইলি বোনাস সেটিংস</h3>
-            <div class="settings-row">
-                <label>🪙 বোনাস টোকেন</label>
-                <input type="number" id="dailyBonusAmount" value="5" />
-            </div>
+            <div class="settings-row"><label>🪙 বোনাস টোকেন</label><input type="number" id="dailyBonusAmount" value="5" /></div>
             <button class="btn-save" onclick="saveDailyBonus()">💾 সেভ করুন</button>
         </div>
 
         <div class="admin-card">
             <h3>📺 অ্যাড সেটিংস</h3>
-            <div class="settings-row">
-                <label>🪙 প্রতি অ্যাডে টোকেন</label>
-                <input type="number" id="tokenPerAd" value="2" />
-            </div>
-            <div class="settings-row">
-                <label>📊 দৈনিক অ্যাড লিমিট</label>
-                <input type="number" id="maxDailyAds" value="20" />
-            </div>
+            <div class="settings-row"><label>🪙 প্রতি অ্যাডে টোকেন</label><input type="number" id="tokenPerAd" value="2" /></div>
+            <div class="settings-row"><label>📊 দৈনিক অ্যাড লিমিট</label><input type="number" id="maxDailyAds" value="20" /></div>
             <button class="btn-save" onclick="saveAdSettings()">💾 সেভ করুন</button>
         </div>
 
         <div class="admin-card">
             <h3>📢 টেলিগ্রাম চ্যানেল</h3>
-            <div class="form-group"><label>🔑 চ্যানেল আইডি</label><input type="text" id="channelIdInput" placeholder="-1001234567890" /></div>
+            <div class="form-group"><label>🔑 চ্যানেল আইডি</label><input type="text" id="channelIdInput" placeholder="-1004335523976" /></div>
             <div class="form-group"><label>👤 চ্যানেল ইউজারনেম</label><input type="text" id="channelUsernameInput" placeholder="BCG_Database" /></div>
             <button class="btn-save" onclick="saveChannelSettings()">💾 চ্যানেল সেভ করুন</button>
             <div id="channelStatus" class="status-msg"></div>
@@ -354,14 +420,49 @@
         const db = firebase.firestore();
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+        // ============================================================
+        // 🆔 ইউজার আইডি (Telegram ID)
+        // ============================================================
         let userId = null;
+
         function getUserId() {
             if (userId) return userId;
-            try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user) { userId = tg.initDataUnsafe.user.id.toString(); return userId; } } catch (e) {}
-            userId = 'demo_' + Date.now(); return userId;
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user?.id) {
+                    userId = tg.initDataUnsafe.user.id.toString();
+                    console.log('✅ Telegram ID:', userId);
+                    return userId;
+                }
+                if (tg && tg.initData) {
+                    const params = new URLSearchParams(tg.initData);
+                    const userStr = params.get('user');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        userId = user.id.toString();
+                        return userId;
+                    }
+                }
+            } catch (e) {}
+            userId = 'demo_' + Date.now();
+            return userId;
         }
-        function getUserName() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user) return tg.initDataUnsafe.user.first_name || 'ইউজার'; } catch (e) {} return 'ইউজার'; }
-        function getUserPhoto() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user && tg.initDataUnsafe.user.photo_url) return tg.initDataUnsafe.user.photo_url; } catch (e) {} return null; }
+
+        function getUserName() {
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user) return tg.initDataUnsafe.user.first_name || 'ইউজার';
+            } catch (e) {}
+            return 'ইউজার';
+        }
+
+        function getUserPhoto() {
+            try {
+                const tg = window.Telegram?.WebApp;
+                if (tg && tg.initDataUnsafe?.user && tg.initDataUnsafe.user.photo_url) return tg.initDataUnsafe.user.photo_url;
+            } catch (e) {}
+            return null;
+        }
 
         function toBn(n) {
             const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
@@ -381,6 +482,7 @@
                     joinedRequiredChannel: false,
                     completedTasks: [],
                     downloadedStories: [],
+                    favourites: [],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             }
@@ -396,6 +498,7 @@
             } catch (e) {}
         }
 
+        // ৫ বার ক্লিক → Admin
         let clickCount = 0, clickTimer = null;
         document.addEventListener('DOMContentLoaded', function() {
             const titleEl = document.getElementById('appTitle');
@@ -414,13 +517,142 @@
         function updateUserUI() {
             const name = getUserName();
             const photo = getUserPhoto();
-            document.getElementById('userName').innerHTML = name + '<small>🟢 অনলাইন</small>';
+            document.getElementById('userName').innerHTML = name + '<small>👤 প্রোফাইল</small>';
             const avatar = document.getElementById('userAvatar');
             if (photo) avatar.innerHTML = `<img src="${photo}" alt="avatar" />`;
             else avatar.textContent = name.charAt(0).toUpperCase();
         }
         updateUserUI();
 
+        // ============================================================
+        // 👤 প্রোফাইল
+        // ============================================================
+        window.showProfile = function() {
+            document.getElementById('homeSection').style.display = 'none';
+            document.getElementById('profileSection').classList.add('show');
+            loadProfile();
+        };
+
+        window.hideProfile = function() {
+            document.getElementById('homeSection').style.display = 'block';
+            document.getElementById('profileSection').classList.remove('show');
+        };
+
+        async function loadProfile() {
+            try {
+                const doc = await db.collection('users').doc(getUserId()).get();
+                const data = doc.exists ? doc.data() : {};
+                const name = data.firstName || getUserName();
+                
+                document.getElementById('profileName').textContent = name;
+                document.getElementById('profileId').textContent = getUserId();
+                document.getElementById('editNameInput').value = name;
+                document.getElementById('pTokens').textContent = toBn(data.tokens || 0);
+                document.getElementById('pDownloads').textContent = toBn((data.downloadedStories || []).length);
+                document.getElementById('pFavs').textContent = toBn((data.favourites || []).length);
+                
+                const photo = getUserPhoto();
+                const avatarEl = document.getElementById('profileAvatar');
+                if (photo) avatarEl.innerHTML = `<img src="${photo}" alt="avatar" />`;
+                else avatarEl.textContent = name.charAt(0).toUpperCase();
+                
+                // ফেভারিট ট্যাব দেখান
+                showProfileTab('fav');
+            } catch (e) {}
+        }
+
+        window.saveProfileName = async function() {
+            const newName = document.getElementById('editNameInput').value.trim();
+            if (!newName) { showToast('⛔ নাম দিন!'); return; }
+            try {
+                await db.collection('users').doc(getUserId()).set({ firstName: newName }, { merge: true });
+                document.getElementById('profileName').textContent = newName;
+                document.getElementById('userName').innerHTML = newName + '<small>👤 প্রোফাইল</small>';
+                showToast('✅ নাম সেভ হয়েছে!');
+            } catch (e) { showToast('⛔ সমস্যা!'); }
+        };
+
+        window.showProfileTab = async function(tab) {
+            document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const container = document.getElementById('profileTabContent');
+            try {
+                const doc = await db.collection('users').doc(getUserId()).get();
+                const data = doc.exists ? doc.data() : {};
+                
+                if (tab === 'fav') {
+                    const favs = data.favourites || [];
+                    if (favs.length === 0) {
+                        container.innerHTML = '<p style="color:#666;text-align:center;padding:30px;">❤️ কোনো ফেভারিট নেই</p>';
+                        return;
+                    }
+                    const storySnap = await db.collection('stories').get();
+                    const stories = [];
+                    storySnap.forEach(d => stories.push({ id: d.id, ...d.data() }));
+                    const favStories = stories.filter(s => favs.includes(s.id));
+                    renderStoryList(favStories, container);
+                } else {
+                    const downloads = data.downloadedStories || [];
+                    if (downloads.length === 0) {
+                        container.innerHTML = '<p style="color:#666;text-align:center;padding:30px;">📥 কোনো ডাউনলোড নেই</p>';
+                        return;
+                    }
+                    const storySnap = await db.collection('stories').get();
+                    const stories = [];
+                    storySnap.forEach(d => stories.push({ id: d.id, ...d.data() }));
+                    const downStories = stories.filter(s => downloads.includes(s.id));
+                    renderStoryList(downStories, container);
+                }
+            } catch (e) {}
+        };
+
+        function renderStoryList(stories, container) {
+            if (stories.length === 0) {
+                container.innerHTML = '<p style="color:#666;text-align:center;padding:30px;">কিছু নেই</p>';
+                return;
+            }
+            container.innerHTML = '';
+            stories.forEach(story => {
+                const card = document.createElement('div');
+                card.className = 'story-card';
+                card.innerHTML = `
+                    <div class="thumb">${story.coverLetter || story.title.charAt(0)}${story.isAdult ? '<span class="age-badge">18+</span>' : ''}</div>
+                    <div class="info"><h3>${story.title}</h3><div class="author">✍️ ${story.author}</div><div class="meta"><span class="tag">${story.category}</span><span class="tag">🪙 ${toBn(story.cost || 5)}</span></div></div>
+                    <div class="actions">
+                        <button class="download-btn" onclick="openSpendModal('${story.id}')">⬇️ ডাউনলোড</button>
+                        <button class="fav-btn" onclick="removeFavourite('${story.id}')">💔</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.removeFavourite = async function(storyId) {
+            await db.collection('users').doc(getUserId()).update({
+                favourites: firebase.firestore.FieldValue.arrayRemove(storyId)
+            });
+            showToast('💔 ফেভারিট থেকে রিমুভ!');
+            showProfileTab('fav');
+        };
+
+        window.toggleFavourite = async function(storyId) {
+            const ref = db.collection('users').doc(getUserId());
+            const doc = await ref.get();
+            const favs = doc.exists ? doc.data().favourites || [] : [];
+            if (favs.includes(storyId)) {
+                await ref.update({ favourites: firebase.firestore.FieldValue.arrayRemove(storyId) });
+                showToast('💔 রিমুভ!');
+            } else {
+                await ref.update({ favourites: firebase.firestore.FieldValue.arrayUnion(storyId) });
+                showToast('❤️ ফেভারিটে যোগ!');
+            }
+            loadStories();
+        };
+
+        // ============================================================
+        // 🔐 Admin Login
+        // ============================================================
         function showAdminLogin() { document.getElementById('adminLogin').classList.add('show'); }
         function closeAdminLogin() { document.getElementById('adminLogin').classList.remove('show'); }
 
@@ -429,7 +661,7 @@
             const password = document.getElementById('adminPassword').value;
             const errorEl = document.getElementById('loginError');
             if (!email || !password) { errorEl.textContent = '⛔ ইমেইল ও পাসওয়ার্ড দিন'; errorEl.style.display = 'block'; return; }
-            if (email !== 'bcg332006@gmail.com') { errorEl.textContent = '⛔ শুধু অ্যাডমিন লগইন করতে পারেন!'; errorEl.style.display = 'block'; return; }
+            if (email !== 'bcg332006@gmail.com') { errorEl.textContent = '⛔ শুধু অ্যাডমিন!'; errorEl.style.display = 'block'; return; }
             try {
                 await auth.signInWithEmailAndPassword(email, password);
                 localStorage.setItem('adminLoggedIn', 'true');
@@ -471,6 +703,50 @@
             await loadSettings();
         }
 
+        // ============================================================
+        // 📁 File Manager (চ্যানেলের ফাইল লিস্ট)
+        // ============================================================
+        window.loadChannelFiles = async function() {
+            const container = document.getElementById('channelFilesList');
+            container.innerHTML = '<p style="color:#666;text-align:center;">লোড হচ্ছে...</p>';
+            
+            try {
+                // Bot Token ও Channel ID নিন Firebase থেকে
+                const telegramDoc = await db.collection('settings').doc('telegram').get();
+                const data = telegramDoc.exists ? telegramDoc.data() : {};
+                const BOT_TOKEN = data.botToken || '';
+                const CHANNEL_ID = data.channelId || '';
+                
+                if (!BOT_TOKEN || !CHANNEL_ID) {
+                    container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">⛔ Bot Token ও Channel ID সেট করুন!</p>';
+                    return;
+                }
+                
+                // Telegram API থেকে চ্যানেলের ফাইল লিস্ট
+                const url = `https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`;
+                const res = await fetch(url);
+                const result = await res.json();
+                
+                if (!result.ok) {
+                    container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">⛔ চ্যানেল পাওয়া যায়নি! Bot Token ও ID চেক করুন।</p>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <p style="color:#00c853;font-size:13px;">✅ চ্যানেল পাওয়া গেছে: ${result.result.title}</p>
+                    <p style="color:#888;font-size:12px;margin-top:8px;">
+                        ℹ️ Telegram API সরাসরি চ্যানেলের সব ফাইল দেখতে দেয় না।<br>
+                        তাই ম্যানুয়ালি file_id বসাতে হবে।
+                    </p>
+                `;
+            } catch (e) {
+                container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">⛔ সমস্যা!</p>';
+            }
+        };
+
+        // ============================================================
+        // 📊 Dashboard
+        // ============================================================
         async function loadDashboardStats() {
             try {
                 const usersSnap = await db.collection('users').get();
@@ -498,6 +774,9 @@
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
         }
 
+        // ============================================================
+        // 🏷️ Category
+        // ============================================================
         async function loadCategories() {
             try {
                 const doc = await db.collection('settings').doc('categories').get();
@@ -540,17 +819,17 @@
             try {
                 const doc = await db.collection('settings').doc('categories').get();
                 const categories = doc.exists ? doc.data().list || [] : [];
-                if (categories.includes(cat)) { alert('এই ক্যাটাগরি আগেই আছে!'); return; }
+                if (categories.includes(cat)) { alert('আগেই আছে!'); return; }
                 categories.push(cat);
                 await db.collection('settings').doc('categories').set({ list: categories }, { merge: true });
                 input.value = '';
                 loadCategories();
                 showToast('✅ ক্যাটাগরি যোগ!');
-            } catch (e) { alert('সমস্যা!'); }
+            } catch (e) {}
         }
 
         async function deleteCategory(index) {
-            if (!confirm('এই ক্যাটাগরি ডিলিট করবেন?')) return;
+            if (!confirm('ডিলিট করবেন?')) return;
             try {
                 const doc = await db.collection('settings').doc('categories').get();
                 const categories = doc.data().list || [];
@@ -561,6 +840,9 @@
             } catch (e) {}
         }
 
+        // ============================================================
+        // 📚 Story Management
+        // ============================================================
         async function loadStoryManagement() {
             try {
                 const snapshot = await db.collection('stories').get();
@@ -589,16 +871,18 @@
         }
 
         async function deleteStory(id) {
-            if (!confirm('এই গল্প ডিলিট করবেন?')) return;
+            if (!confirm('ডিলিট করবেন?')) return;
             try {
                 await db.collection('stories').doc(id).delete();
                 loadStoryManagement();
                 loadDashboardStats();
-                loadStories('all');
                 showToast('🗑️ ডিলিট!');
             } catch (e) {}
         }
 
+        // ============================================================
+        // 👥 User Management
+        // ============================================================
         let allUsers = [];
         async function loadUserManagement() {
             try {
@@ -635,8 +919,7 @@
         function searchUsers() {
             const query = document.getElementById('userSearchInput').value.toLowerCase();
             const filtered = allUsers.filter(u => 
-                (u.firstName || '').toLowerCase().includes(query) ||
-                u.id.includes(query)
+                (u.firstName || '').toLowerCase().includes(query) || u.id.includes(query)
             );
             renderUserList(filtered);
         }
@@ -647,9 +930,12 @@
                 loadUserManagement();
                 loadDashboardStats();
                 showToast(`✅ ${amount > 0 ? '+' : ''}${amount} টোকেন!`);
-            } catch (e) { alert('সমস্যা!'); }
+            } catch (e) {}
         }
 
+        // ============================================================
+        // 📢 Settings
+        // ============================================================
         async function saveChannelSettings() {
             const channelId = document.getElementById('channelIdInput').value.trim();
             const username = document.getElementById('channelUsernameInput').value.trim();
@@ -681,7 +967,7 @@
             try {
                 await db.collection('settings').doc('requiredChannel').set({ channelLink: link, channelUsername: username || '', isRequired: isActive, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 status.innerHTML = '<span class="status-success">✅ সেভ হয়েছে!</span>';
-                showToast('✅ বাধ্যতামূলক চ্যানেল সেভ!');
+                showToast('✅ সেভ!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
         }
 
@@ -703,7 +989,7 @@
             if (!zoneId) { status.innerHTML = '<span class="status-error">⛔ Zone ID দিন!</span>'; return; }
             try {
                 await db.collection('settings').doc('monetag').set({ zoneId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-                status.innerHTML = '<span class="status-success">✅ Zone ID সেভ হয়েছে!</span>';
+                status.innerHTML = '<span class="status-success">✅ Zone ID সেভ!</span>';
                 showToast('✅ Zone ID সেভ!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
         }
@@ -732,7 +1018,7 @@
             try {
                 await db.collection('settings').doc('appSettings').set({ dailyBonus: amount }, { merge: true });
                 showToast('✅ ডেইলি বোনাস সেভ!');
-            } catch (e) { alert('সমস্যা!'); }
+            } catch (e) {}
         }
 
         async function saveAdSettings() {
@@ -741,9 +1027,12 @@
             try {
                 await db.collection('settings').doc('appSettings').set({ tokenPerAd, maxDailyAds }, { merge: true });
                 showToast('✅ অ্যাড সেটিংস সেভ!');
-            } catch (e) { alert('সমস্যা!'); }
+            } catch (e) {}
         }
 
+        // ============================================================
+        // 📋 Sponsor Tasks
+        // ============================================================
         async function loadSponsorTasks() {
             try {
                 const doc = await db.collection('settings').doc('sponsorTasks').get();
@@ -791,7 +1080,7 @@
                 document.getElementById('newTaskReward').value = '';
                 loadSponsorTasks();
                 showToast('✅ টাস্ক যোগ!');
-            } catch (e) { alert('সমস্যা!'); }
+            } catch (e) {}
         }
 
         async function toggleSponsorTask(index) {
@@ -805,7 +1094,7 @@
         }
 
         async function deleteSponsorTask(index) {
-            if (!confirm('এই টাস্ক ডিলিট করবেন?')) return;
+            if (!confirm('ডিলিট করবেন?')) return;
             try {
                 const doc = await db.collection('settings').doc('sponsorTasks').get();
                 const tasks = doc.data().tasks || [];
@@ -816,12 +1105,16 @@
             } catch (e) {}
         }
 
+        // ============================================================
+        // 🎵 Story Upload
+        // ============================================================
         async function uploadStory() {
             const title = document.getElementById('storyTitle').value.trim();
             const author = document.getElementById('storyAuthor').value.trim();
             const category = document.getElementById('storyCategory').value;
             const cost = parseInt(document.getElementById('storyCost').value) || 5;
             const duration = document.getElementById('storyDuration').value.trim() || '১০:০০';
+            const fileId = document.getElementById('storyFileId').value.trim();
             const status = document.getElementById('uploadStatus');
             if (!title || !author) { status.innerHTML = '<span class="status-error">⛔ শিরোনাম ও লেখক দিন!</span>'; return; }
             if (!category) { status.innerHTML = '<span class="status-error">⛔ আগে ক্যাটাগরি যোগ করুন!</span>'; return; }
@@ -832,6 +1125,7 @@
                     isAdult: true,
                     isActive: true,
                     downloadCount: 0,
+                    telegramFileId: fileId || '',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 status.innerHTML = '<span class="status-success">✅ গল্প আপলোড হয়েছে!</span>';
@@ -839,14 +1133,19 @@
                 document.getElementById('storyAuthor').value = '';
                 document.getElementById('storyCost').value = '';
                 document.getElementById('storyDuration').value = '';
+                document.getElementById('storyFileId').value = '';
                 loadStoryManagement();
                 loadDashboardStats();
                 showToast('✅ গল্প আপলোড!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
         }
 
+        // ============================================================
+        // 📚 User Story List
+        // ============================================================
         let allStories = [];
         let downloadedStories = [];
+        let favourites = [];
 
         async function loadStoriesFromFirestore() {
             try {
@@ -859,7 +1158,8 @@
                         category: data.category, cost: data.cost || 5,
                         coverLetter: data.coverLetter || data.title.charAt(0),
                         isAdult: data.isAdult !== false,
-                        duration: data.duration || '১০:০০'
+                        duration: data.duration || '১০:০০',
+                        telegramFileId: data.telegramFileId || ''
                     });
                 });
             } catch (e) { allStories = []; }
@@ -867,7 +1167,12 @@
 
         async function loadStories(filter = 'all') {
             const container = document.getElementById('storyList');
-            try { const userDoc = await db.collection('users').doc(getUserId()).get(); downloadedStories = userDoc.exists ? userDoc.data().downloadedStories || [] : []; } catch (e) { downloadedStories = []; }
+            try {
+                const userDoc = await db.collection('users').doc(getUserId()).get();
+                downloadedStories = userDoc.exists ? userDoc.data().downloadedStories || [] : [];
+                favourites = userDoc.exists ? userDoc.data().favourites || [] : [];
+            } catch (e) { downloadedStories = []; favourites = []; }
+            
             let filtered = filter === 'all' ? allStories : allStories.filter(s => s.category === filter);
             if (filtered.length === 0) {
                 container.innerHTML = `<div class="empty-state"><i class="fas fa-book-open" style="font-size:50px; color:#2a2a4a; display:block; margin-bottom:12px;"></i><p>কোনো গল্প নেই</p></div>`;
@@ -876,17 +1181,24 @@
             container.innerHTML = '';
             filtered.forEach(story => {
                 const isDownloaded = downloadedStories.includes(story.id);
+                const isFav = favourites.includes(story.id);
                 const card = document.createElement('div');
                 card.className = 'story-card';
                 card.innerHTML = `
                     <div class="thumb">${story.coverLetter}${story.isAdult ? '<span class="age-badge">18+</span>' : ''}</div>
                     <div class="info"><h3>${story.title}</h3><div class="author">✍️ ${story.author}</div><div class="meta"><span class="tag">${story.category}</span>${story.isAdult ? '<span class="tag adult">🔞 18+</span>' : ''}<span class="tag">🪙 ${toBn(story.cost)}</span><span class="tag">⏱️ ${story.duration}</span></div></div>
-                    <div class="actions">${isDownloaded ? `<span class="downloaded-badge">✅ ডাউনলোড</span>` : `<button class="download-btn" onclick="openSpendModal('${story.id}')">⬇️ ডাউনলোড</button>`}</div>
+                    <div class="actions">
+                        ${isDownloaded ? `<span class="downloaded-badge">✅ ডাউনলোড</span>` : `<button class="download-btn" onclick="openSpendModal('${story.id}')">⬇️ ডাউনলোড</button>`}
+                        <button class="fav-btn" onclick="toggleFavourite('${story.id}')">${isFav ? '❤️' : '🤍'}</button>
+                    </div>
                 `;
                 container.appendChild(card);
             });
         }
 
+        // ============================================================
+        // 💰 Token
+        // ============================================================
         async function getUserTokens() { try { const doc = await db.collection('users').doc(getUserId()).get(); return doc.exists ? doc.data().tokens || 0 : 0; } catch (e) { return 0; } }
         async function spendTokens(amount) { const ref = db.collection('users').doc(getUserId()); const doc = await ref.get(); const current = doc.exists ? doc.data().tokens || 0 : 0; if (current < amount) return false; await ref.update({ tokens: firebase.firestore.FieldValue.increment(-amount) }); return true; }
         async function updateUI() { const tokens = await getUserTokens(); document.getElementById('tokenDisplay').textContent = toBn(tokens); }
@@ -923,6 +1235,26 @@
                 const ref = db.collection('users').doc(getUserId());
                 await ref.update({ downloadedStories: firebase.firestore.FieldValue.arrayUnion(storyId) }, { merge: true });
                 await db.collection('stories').doc(storyId).update({ downloadCount: firebase.firestore.FieldValue.increment(1) });
+                
+                // Telegram API থেকে অডিও ডাউনলোড
+                if (story.telegramFileId) {
+                    try {
+                        const doc = await db.collection('settings').doc('telegram').get();
+                        const BOT_TOKEN = doc.exists ? doc.data().botToken : '';
+                        if (BOT_TOKEN) {
+                            const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${story.telegramFileId}`);
+                            const fileData = await fileRes.json();
+                            if (fileData.ok) {
+                                const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
+                                const link = document.createElement('a');
+                                link.href = fileUrl;
+                                link.download = `${story.title}.mp3`;
+                                link.click();
+                            }
+                        }
+                    } catch (e) { console.error(e); }
+                }
+                
                 closeModal('spendModal');
                 showToast(`✅ "${story.title}" ডাউনলোড হয়েছে!`);
                 await updateUI();
@@ -945,6 +1277,9 @@
 
         function showToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._timer); el._timer = setTimeout(() => el.classList.remove('show'), 2800); }
 
+        // ============================================================
+        // 🚀 Init
+        // ============================================================
         async function init() {
             await ensureUserExists();
             await loadAppTitle();
@@ -953,7 +1288,7 @@
             await loadCategories();
             loadStories('all');
             if (window.Telegram?.WebApp) { window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
-            console.log('✅ Audio App + Admin Ready!');
+            console.log('✅ Audio App Ready!');
         }
         init();
     </script>
