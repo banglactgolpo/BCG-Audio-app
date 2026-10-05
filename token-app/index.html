@@ -104,7 +104,7 @@
         <div class="card-title"><i class="fas fa-gift"></i> ডেইলি বোনাস</div>
         <div class="bonus-box">
             <div class="left">
-                <span style="font-weight:600;">+৫ টোকেন</span>
+                <span style="font-weight:600;">+<span id="dailyBonusAmt">৫</span> টোকেন</span>
                 <span class="day" id="bonusStatus">আজ দাবি করা হয়নি</span>
             </div>
             <button class="btn btn-primary" style="width:auto; padding:10px 24px;" onclick="claimDailyBonus()">
@@ -116,7 +116,7 @@
     <div class="card">
         <div class="card-title"><i class="fas fa-video"></i> অ্যাড দেখে টোকেন নিন</div>
         <button class="btn btn-primary" id="watchAdBtn" onclick="watchAd()">
-            <i class="fas fa-play-circle"></i> অ্যাড দেখুন (+২ টোকেন)
+            <i class="fas fa-play-circle"></i> অ্যাড দেখুন (+<span id="tokenPerAdAmt">২</span> টোকেন)
         </button>
         <div style="text-align:center; margin-top:8px; font-size:13px; color:#888;">
             আজ <span id="adCountDisplay">০</span>/<span id="maxAdDisplay">২০</span> টি অ্যাড দেখেছেন
@@ -192,7 +192,7 @@
         const db = firebase.firestore();
 
         // ============================================================
-        // 🆔 ইউজার আইডি
+        // 🆔 ইউজার আইডি (Telegram ID)
         // ============================================================
         let userId = null;
 
@@ -202,10 +202,12 @@
                 const tg = window.Telegram?.WebApp;
                 if (tg && tg.initDataUnsafe?.user) {
                     userId = tg.initDataUnsafe.user.id.toString();
+                    console.log('✅ Telegram ID:', userId);
                     return userId;
                 }
-            } catch (e) {}
+            } catch (e) { console.error('Telegram error:', e); }
             userId = 'demo_' + Date.now();
+            console.log('⚠️ Demo ID:', userId);
             return userId;
         }
 
@@ -228,6 +230,29 @@
         }
 
         // ============================================================
+        // 📦 ইউজার ডেটা তৈরি (যদি না থাকে)
+        // ============================================================
+        async function ensureUserExists() {
+            const ref = db.collection('users').doc(getUserId());
+            const doc = await ref.get();
+            if (!doc.exists) {
+                await ref.set({
+                    firstName: getUserName(),
+                    username: '',
+                    tokens: 0,
+                    dailyAdCount: 0,
+                    lastAdDate: null,
+                    lastBonus: null,
+                    joinedRequiredChannel: false,
+                    completedTasks: [],
+                    downloadedStories: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('✅ নতুন ইউজার তৈরি');
+            }
+        }
+
+        // ============================================================
         // 🎯 টাইটেল লোড
         // ============================================================
         async function loadAppTitle() {
@@ -237,6 +262,30 @@
                     document.getElementById('appTitle').textContent = doc.data().title;
                 }
             } catch (e) {}
+        }
+
+        // ============================================================
+        // ⚙️ অ্যাপ সেটিংস লোড (ডেইলি বোনাস, অ্যাড টোকেন, লিমিট)
+        // ============================================================
+        let appSettings = { dailyBonus: 5, tokenPerAd: 2, maxDailyAds: 20 };
+
+        async function loadAppSettings() {
+            try {
+                const doc = await db.collection('settings').doc('appSettings').get();
+                if (doc.exists) {
+                    appSettings.dailyBonus = doc.data().dailyBonus || 5;
+                    appSettings.tokenPerAd = doc.data().tokenPerAd || 2;
+                    appSettings.maxDailyAds = doc.data().maxDailyAds || 20;
+                }
+                document.getElementById('dailyBonusAmt').textContent = toBn(appSettings.dailyBonus);
+                document.getElementById('tokenPerAdAmt').textContent = toBn(appSettings.tokenPerAd);
+                document.getElementById('maxAdDisplay').textContent = toBn(appSettings.maxDailyAds);
+            } catch (e) {}
+        }
+
+        function toBn(n) {
+            const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+            return n.toString().split('').map(d => bn[d] || d).join('');
         }
 
         // ============================================================
@@ -263,16 +312,22 @@
         }
 
         async function addTokens(amount) {
-            const ref = db.collection('users').doc(getUserId());
-            await ref.set({ tokens: firebase.firestore.FieldValue.increment(amount) }, { merge: true });
-            await updateUI();
+            try {
+                const ref = db.collection('users').doc(getUserId());
+                await ref.set({ tokens: firebase.firestore.FieldValue.increment(amount) }, { merge: true });
+                console.log('✅ টোকেন যোগ:', amount);
+                await updateUI();
+            } catch (e) {
+                console.error('❌ টোকেন যোগ সমস্যা:', e);
+                showToast('⛔ সমস্যা! Rules চেক করুন');
+            }
         }
 
         async function updateUI() {
             const tokens = await getUserTokens();
-            document.getElementById('tokenDisplay').textContent = tokens;
+            document.getElementById('tokenDisplay').textContent = toBn(tokens);
             const adData = await getAdCount();
-            document.getElementById('adCountDisplay').textContent = adData.count;
+            document.getElementById('adCountDisplay').textContent = toBn(adData.count);
         }
 
         // ============================================================
@@ -283,8 +338,8 @@
                 const doc = await db.collection('users').doc(getUserId()).get();
                 const data = doc.exists ? doc.data() : {};
                 const today = new Date().toDateString();
-                if (data.lastAdDate !== today) return { count: 0, max: 20 };
-                return { count: data.dailyAdCount || 0, max: 20 };
+                if (data.lastAdDate !== today) return { count: 0, max: appSettings.maxDailyAds };
+                return { count: data.dailyAdCount || 0, max: appSettings.maxDailyAds };
             } catch (e) { return { count: 0, max: 20 }; }
         }
 
@@ -301,39 +356,46 @@
         // 🎯 ডেইলি বোনাস
         // ============================================================
         window.claimDailyBonus = async function() {
-            const ref = db.collection('users').doc(getUserId());
-            const doc = await ref.get();
-            const data = doc.exists ? doc.data() : {};
-            const today = new Date().toDateString();
-            if (data.lastBonus === today) {
-                showToast('⏳ আজকে বোনাস নেওয়া হয়েছে!');
-                return;
+            try {
+                const ref = db.collection('users').doc(getUserId());
+                const doc = await ref.get();
+                const data = doc.exists ? doc.data() : {};
+                const today = new Date().toDateString();
+                if (data.lastBonus === today) {
+                    showToast('⏳ আজকে বোনাস নেওয়া হয়েছে!');
+                    return;
+                }
+                await addTokens(appSettings.dailyBonus);
+                await ref.set({ lastBonus: today }, { merge: true });
+                document.getElementById('bonusStatus').textContent = '✅ আজকে নেওয়া হয়েছে';
+                showToast(`🎁 +${toBn(appSettings.dailyBonus)} টোকেন!`);
+            } catch (e) {
+                console.error(e);
+                showToast('⛔ সমস্যা!');
             }
-            await addTokens(5);
-            await ref.set({ lastBonus: today }, { merge: true });
-            document.getElementById('bonusStatus').textContent = '✅ আজকে নেওয়া হয়েছে';
-            showToast('🎁 +৫ টোকেন বোনাস!');
         };
 
         // ============================================================
         // 📺 অ্যাড ওয়াচ
         // ============================================================
         window.watchAd = async function() {
-            const adData = await getAdCount();
-            if (adData.count >= adData.max) {
-                showToast('⏳ আজকের অ্যাড লিমিট শেষ!');
-                return;
-            }
-            const canUse = await checkRequiredChannel();
-            if (!canUse) return;
-            showToast('📺 অ্যাড দেখানো হচ্ছে...');
-            setTimeout(async () => {
-                await addTokens(2);
-                await incrementAdCount();
-                const newData = await getAdCount();
-                document.getElementById('adCountDisplay').textContent = newData.count;
-                showToast(`🎬 +২ টোকেন! (আজ ${newData.count}/${newData.max})`);
-            }, 2000);
+            try {
+                const adData = await getAdCount();
+                if (adData.count >= adData.max) {
+                    showToast('⏳ আজকের অ্যাড লিমিট শেষ!');
+                    return;
+                }
+                const canUse = await checkRequiredChannel();
+                if (!canUse) return;
+                showToast('📺 অ্যাড দেখানো হচ্ছে...');
+                setTimeout(async () => {
+                    await addTokens(appSettings.tokenPerAd);
+                    await incrementAdCount();
+                    const newData = await getAdCount();
+                    document.getElementById('adCountDisplay').textContent = toBn(newData.count);
+                    showToast(`🎬 +${toBn(appSettings.tokenPerAd)} টোকেন!`);
+                }, 2000);
+            } catch (e) { console.error(e); }
         };
 
         // ============================================================
@@ -348,7 +410,7 @@
             btn.classList.add('done');
             btn.textContent = '✅ ডোন';
             await addTokens(reward);
-            showToast(`✅ +${reward} টোকেন!`);
+            showToast(`✅ +${toBn(reward)} টোকেন!`);
         };
 
         // ============================================================
@@ -357,7 +419,7 @@
         let tapCount = 0;
         window.handleTap = function() {
             tapCount++;
-            document.getElementById('tapProgress').textContent = tapCount;
+            document.getElementById('tapProgress').textContent = toBn(tapCount);
             if (tapCount >= 10) {
                 tapCount = 0;
                 document.getElementById('tapProgress').textContent = '০';
@@ -446,7 +508,7 @@
                         <div class="sponsor-task-item ${isCompleted ? 'completed' : ''}">
                             <div>
                                 <strong>📢 ${task.channelUsername || 'চ্যানেল'}</strong>
-                                <span style="color:#ffd700;">🪙 ${task.reward}</span>
+                                <span style="color:#ffd700;">🪙 ${toBn(task.reward)}</span>
                             </div>
                             ${isCompleted ? '<span class="status">✅ সম্পন্ন</span>' :
                             `<button class="btn-join" onclick="joinSponsorChannel('${task.id}','${task.channelLink}',${task.reward})">জয়েন করুন</button>`}
@@ -466,7 +528,7 @@
                     tokens: firebase.firestore.FieldValue.increment(reward),
                     completedTasks: firebase.firestore.FieldValue.arrayUnion(taskId)
                 });
-                showToast(`✅ +${reward} টোকেন পেয়েছেন!`);
+                showToast(`✅ +${toBn(reward)} টোকেন!`);
                 loadSponsorTasks();
                 updateUI();
             }
@@ -488,30 +550,32 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const name = data.firstName || data.username || 'ইউজার';
-                    html += `<div class="rank-item"><span class="pos">${emojis[i] || (i+1)+'.'}</span><span class="name">${name}</span><span class="tokens">${data.tokens || 0}</span></div>`;
+                    html += `<div class="rank-item"><span class="pos">${emojis[i] || (i+1)+'.'}</span><span class="name">${name}</span><span class="tokens">${toBn(data.tokens || 0)}</span></div>`;
                     i++;
                 });
                 container.innerHTML = html;
-            } catch (e) {
-                document.getElementById('leaderboardList').innerHTML = '<p style="color:#666; text-align:center; font-size:13px;">⚠️ লোড সমস্যা</p>';
-            }
+            } catch (e) {}
         }
 
         // ============================================================
         // 🚀 বুট
         // ============================================================
         async function init() {
-            await loadAppTitle();
-            await checkRequiredChannel();
-            await updateUI();
-            await loadSponsorTasks();
-            await loadLeaderboard();
-            document.getElementById('refLink').value = `https://t.me/BCGtokens_bot?start=ref_${getUserId()}`;
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.ready();
-                window.Telegram.WebApp.expand();
-            }
-            console.log('✅ Token App Ready!');
+            try {
+                await ensureUserExists();      // ← ইউজার তৈরি
+                await loadAppTitle();
+                await loadAppSettings();       // ← সেটিংস লোড
+                await checkRequiredChannel();
+                await updateUI();
+                await loadSponsorTasks();
+                await loadLeaderboard();
+                document.getElementById('refLink').value = `https://t.me/BCGtokens_bot?start=ref_${getUserId()}`;
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                }
+                console.log('✅ Token App Ready!');
+            } catch (e) { console.error('Init error:', e); }
         }
         init();
     </script>
