@@ -125,11 +125,27 @@
         .task-row .btn-toggle { background: #2a2a4a; color: #fff; }
         .task-row .btn-delete { background: #d32f2f; color: #fff; }
         
+        .category-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #12121f; border-radius: 8px; margin-bottom: 6px; }
+        .category-item button { background: #d32f2f; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        
+        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #12121f; border-radius: 10px; margin-bottom: 8px; border-left: 3px solid #ffd700; }
+        .user-row .user-info { flex: 1; }
+        .user-row .user-info strong { display: block; font-size: 14px; }
+        .user-row .user-info span { font-size: 12px; color: #888; }
+        .user-row .user-actions button { border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; margin-left: 4px; }
+        .user-row .btn-add-token { background: #00c853; color: #fff; }
+        .user-row .btn-remove-token { background: #d32f2f; color: #fff; }
+        
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #12121f; border-radius: 10px; margin-bottom: 8px; }
+        .settings-row label { font-size: 14px; color: #ccc; }
+        .settings-row input { width: 80px; padding: 6px 10px; border-radius: 8px; border: 1px solid #2a2a4a; background: #0a0a14; color: #fff; font-size: 14px; text-align: center; }
+        
         @media (min-width: 500px) { body { max-width: 420px; margin: 0 auto; } }
     </style>
 </head>
 <body>
 
+    <!-- ========== ইউজার ভিউ ========== -->
     <div id="userView">
         <div class="header">
             <div class="user-info" style="display:flex; align-items:center; gap:12px;">
@@ -146,11 +162,6 @@
 
         <div class="filter-bar" id="filterBar">
             <button class="filter-btn active" data-filter="all">সব</button>
-            <button class="filter-btn" data-filter="রোমান্টিক">💕 রোমান্টিক</button>
-            <button class="filter-btn" data-filter="ইরোটিক">🔥 ইরোটিক</button>
-            <button class="filter-btn" data-filter="থ্রিলার">🔪 থ্রিলার</button>
-            <button class="filter-btn" data-filter="সাইকোলজিক্যাল">🧠 সাইকোলজিক্যাল</button>
-            <button class="filter-btn" data-filter="ডার্ক রোমান্স">🌑 ডার্ক রোমান্স</button>
         </div>
 
         <div id="storyList"><div style="text-align:center; padding:40px 0; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:30px; display:block; margin-bottom:10px;"></i>গল্প লোড হচ্ছে...</div></div>
@@ -158,6 +169,7 @@
         <div class="footer-link"><a href="#" onclick="goToTokenBot()"><i class="fas fa-coins"></i> 🪙 টোকেন সংগ্রহ করুন</a></div>
     </div>
 
+    <!-- ========== অ্যাডমিন প্যানেল ========== -->
     <div id="adminPanel">
         <div class="admin-header">
             <h1>📊 BcgAudio Admin</h1>
@@ -176,52 +188,86 @@
 
         <div class="admin-card">
             <h3>🎨 অ্যাপ টাইটেল</h3>
-            <div class="form-group">
-                <label>📝 নতুন টাইটেল</label>
-                <input type="text" id="appTitleInput" placeholder="🎧 BcgAudio" />
-            </div>
+            <div class="form-group"><label>📝 নতুন টাইটেল</label><input type="text" id="appTitleInput" placeholder="🎧 BcgAudio" /></div>
             <button class="btn-save" onclick="saveAppTitle()">💾 টাইটেল সেভ করুন</button>
             <div id="appTitleStatus" class="status-msg"></div>
         </div>
 
         <div class="admin-card">
+            <h3>🏷️ ক্যাটাগরি ম্যানেজমেন্ট</h3>
+            <div id="categoryList"><p style="color:#666;text-align:center;font-size:13px;">লোড হচ্ছে...</p></div>
+            <div class="form-group" style="margin-top:12px;">
+                <label>➕ নতুন ক্যাটাগরি</label>
+                <input type="text" id="newCategoryInput" placeholder="যেমন: রোমান্টিক" />
+            </div>
+            <button class="btn-save" onclick="addCategory()">➕ ক্যাটাগরি যোগ করুন</button>
+        </div>
+
+        <div class="admin-card">
+            <h3>📚 গল্প ম্যানেজমেন্ট</h3>
+            <div id="storyManageList"><p style="color:#666;text-align:center;font-size:13px;">লোড হচ্ছে...</p></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>➕ নতুন গল্প আপলোড</h3>
+            <div class="form-group"><label>📝 শিরোনাম</label><input type="text" id="storyTitle" placeholder="অধরা স্পর্শ" /></div>
+            <div class="form-group"><label>✍️ লেখক</label><input type="text" id="storyAuthor" placeholder="অনামিকা" /></div>
+            <div class="form-group"><label>🏷️ ক্যাটাগরি</label><select id="storyCategory"></select></div>
+            <div class="form-group"><label>🪙 ডাউনলোড কস্ট</label><input type="number" id="storyCost" placeholder="5" /></div>
+            <div class="form-group"><label>⏱️ সময়কাল</label><input type="text" id="storyDuration" placeholder="১০:০০" /></div>
+            <div class="form-group"><label>🎵 অডিও ফাইল</label><input type="file" id="storyAudio" accept="audio/*" /></div>
+            <button class="btn-save" onclick="uploadStory()">🚀 গল্প আপলোড করুন</button>
+            <div id="uploadStatus" class="status-msg"></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>👥 ইউজার ম্যানেজমেন্ট</h3>
+            <div class="form-group"><label>🔍 ইউজার সার্চ</label><input type="text" id="userSearchInput" placeholder="নাম বা আইডি" oninput="searchUsers()" /></div>
+            <div id="userList"><p style="color:#666;text-align:center;font-size:13px;">লোড হচ্ছে...</p></div>
+        </div>
+
+        <div class="admin-card">
+            <h3>🎁 ডেইলি বোনাস সেটিংস</h3>
+            <div class="settings-row">
+                <label>🪙 বোনাস টোকেন</label>
+                <input type="number" id="dailyBonusAmount" value="5" />
+            </div>
+            <button class="btn-save" onclick="saveDailyBonus()">💾 সেভ করুন</button>
+        </div>
+
+        <div class="admin-card">
+            <h3>📺 অ্যাড সেটিংস</h3>
+            <div class="settings-row">
+                <label>🪙 প্রতি অ্যাডে টোকেন</label>
+                <input type="number" id="tokenPerAd" value="2" />
+            </div>
+            <div class="settings-row">
+                <label>📊 দৈনিক অ্যাড লিমিট</label>
+                <input type="number" id="maxDailyAds" value="20" />
+            </div>
+            <button class="btn-save" onclick="saveAdSettings()">💾 সেভ করুন</button>
+        </div>
+
+        <div class="admin-card">
             <h3>📢 টেলিগ্রাম চ্যানেল</h3>
-            <div class="form-group">
-                <label>🔑 চ্যানেল আইডি</label>
-                <input type="text" id="channelIdInput" placeholder="-1001234567890" />
-                <small>💡 @userinfobot থেকে নিন</small>
-            </div>
-            <div class="form-group">
-                <label>👤 চ্যানেল ইউজারনেম</label>
-                <input type="text" id="channelUsernameInput" placeholder="BCG_Database" />
-            </div>
+            <div class="form-group"><label>🔑 চ্যানেল আইডি</label><input type="text" id="channelIdInput" placeholder="-1001234567890" /></div>
+            <div class="form-group"><label>👤 চ্যানেল ইউজারনেম</label><input type="text" id="channelUsernameInput" placeholder="BCG_Database" /></div>
             <button class="btn-save" onclick="saveChannelSettings()">💾 চ্যানেল সেভ করুন</button>
             <div id="channelStatus" class="status-msg"></div>
         </div>
 
         <div class="admin-card">
             <h3>🔒 বাধ্যতামূলক চ্যানেল</h3>
-            <div class="form-group">
-                <label>📢 চ্যানেল লিংক</label>
-                <input type="url" id="requiredChannelLink" placeholder="https://t.me/BCG_Database" />
-            </div>
-            <div class="form-group">
-                <label>👤 চ্যানেল ইউজারনেম</label>
-                <input type="text" id="requiredChannelUsername" placeholder="BCG_Database" />
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="requiredChannelActive" checked /> ✅ বাধ্যতামূলক</label>
-            </div>
+            <div class="form-group"><label>📢 চ্যানেল লিংক</label><input type="url" id="requiredChannelLink" placeholder="https://t.me/BCG_Updates" /></div>
+            <div class="form-group"><label>👤 চ্যানেল ইউজারনেম</label><input type="text" id="requiredChannelUsername" placeholder="BCG_Updates" /></div>
+            <div class="form-group"><label><input type="checkbox" id="requiredChannelActive" checked /> ✅ বাধ্যতামূলক</label></div>
             <button class="btn-save" onclick="saveRequiredChannel()">💾 সেভ করুন</button>
             <div id="requiredChannelStatus" class="status-msg"></div>
         </div>
 
         <div class="admin-card">
             <h3>📺 Monetag Zone ID</h3>
-            <div class="form-group">
-                <label>🔑 Zone ID</label>
-                <input type="text" id="monetagZoneId" placeholder="1234567" />
-            </div>
+            <div class="form-group"><label>🔑 Zone ID</label><input type="text" id="monetagZoneId" placeholder="1234567" /></div>
             <button class="btn-save" onclick="saveZoneId()">💾 সেভ করুন</button>
             <div id="zoneStatus" class="status-msg"></div>
         </div>
@@ -239,47 +285,23 @@
             </div>
         </div>
 
-        <div class="admin-card">
-            <h3>➕ নতুন গল্প আপলোড</h3>
-            <div class="form-group"><label>📝 শিরোনাম</label><input type="text" id="storyTitle" placeholder="অধরা স্পর্শ" /></div>
-            <div class="form-group"><label>✍️ লেখক</label><input type="text" id="storyAuthor" placeholder="অনামিকা" /></div>
-            <div class="form-group">
-                <label>🏷️ ক্যাটাগরি</label>
-                <select id="storyCategory">
-                    <option>রোমান্টিক</option>
-                    <option>ইরোটিক</option>
-                    <option>থ্রিলার</option>
-                    <option>সাইকোলজিক্যাল</option>
-                    <option>ডার্ক রোমান্স</option>
-                </select>
-            </div>
-            <div class="form-group"><label>🪙 ডাউনলোড কস্ট</label><input type="number" id="storyCost" placeholder="5" /></div>
-            <div class="form-group"><label>🎵 অডিও ফাইল</label><input type="file" id="storyAudio" accept="audio/*" /></div>
-            <button class="btn-save" onclick="uploadStory()">🚀 গল্প আপলোড করুন</button>
-            <div id="uploadStatus" class="status-msg"></div>
-        </div>
-
         <div style="height: 40px;"></div>
     </div>
 
+    <!-- ========== অ্যাডমিন লগইন ========== -->
     <div id="adminLogin">
         <div class="login-box">
             <h2>🔐 অ্যাডমিন লগইন</h2>
             <p class="sub">BcgAudio প্যানেলে প্রবেশ করুন</p>
-            <div class="form-group">
-                <label>📧 ইমেইল</label>
-                <input type="email" id="adminEmail" placeholder="bcg332006@gmail.com" />
-            </div>
-            <div class="form-group">
-                <label>🔑 পাসওয়ার্ড</label>
-                <input type="password" id="adminPassword" placeholder="********" />
-            </div>
+            <div class="form-group"><label>📧 ইমেইল</label><input type="email" id="adminEmail" placeholder="bcg332006@gmail.com" /></div>
+            <div class="form-group"><label>🔑 পাসওয়ার্ড</label><input type="password" id="adminPassword" placeholder="********" /></div>
             <button class="btn-login" onclick="adminLogin()">🔐 লগইন করুন</button>
             <button class="btn-close" onclick="closeAdminLogin()">⏹️ বাতিল করুন</button>
             <div id="loginError" class="error"></div>
         </div>
     </div>
 
+    <!-- ========== মোডাল ========== -->
     <div class="modal-overlay" id="spendModal">
         <div class="modal-box">
             <div class="thumb-big" id="modalThumb">অ</div>
@@ -330,6 +352,7 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
         let userId = null;
         function getUserId() {
@@ -339,6 +362,29 @@
         }
         function getUserName() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user) return tg.initDataUnsafe.user.first_name || 'ইউজার'; } catch (e) {} return 'ইউজার'; }
         function getUserPhoto() { try { const tg = window.Telegram?.WebApp; if (tg && tg.initDataUnsafe?.user && tg.initDataUnsafe.user.photo_url) return tg.initDataUnsafe.user.photo_url; } catch (e) {} return null; }
+
+        function toBn(n) {
+            const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+            return n.toString().split('').map(d => bn[d] || d).join('');
+        }
+
+        async function ensureUserExists() {
+            const ref = db.collection('users').doc(getUserId());
+            const doc = await ref.get();
+            if (!doc.exists) {
+                await ref.set({
+                    firstName: getUserName(),
+                    tokens: 0,
+                    dailyAdCount: 0,
+                    lastAdDate: null,
+                    lastBonus: null,
+                    joinedRequiredChannel: false,
+                    completedTasks: [],
+                    downloadedStories: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }
 
         async function loadAppTitle() {
             try {
@@ -360,10 +406,7 @@
                     setTimeout(() => { this.style.transform = 'scale(1)'; }, 150);
                     clearTimeout(clickTimer);
                     clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
-                    if (clickCount >= 5) {
-                        clickCount = 0;
-                        showAdminLogin();
-                    }
+                    if (clickCount >= 5) { clickCount = 0; showAdminLogin(); }
                 });
             }
         });
@@ -389,6 +432,7 @@
             if (email !== 'bcg332006@gmail.com') { errorEl.textContent = '⛔ শুধু অ্যাডমিন লগইন করতে পারেন!'; errorEl.style.display = 'block'; return; }
             try {
                 await auth.signInWithEmailAndPassword(email, password);
+                localStorage.setItem('adminLoggedIn', 'true');
                 closeAdminLogin();
                 document.getElementById('userView').classList.add('hide');
                 document.getElementById('adminPanel').classList.add('show');
@@ -401,31 +445,44 @@
 
         async function adminLogout() {
             await auth.signOut();
+            localStorage.removeItem('adminLoggedIn');
             document.getElementById('adminPanel').classList.remove('show');
             document.getElementById('userView').classList.remove('hide');
         }
 
+        auth.onAuthStateChanged((user) => {
+            if (user && localStorage.getItem('adminLoggedIn') === 'true') {
+                document.getElementById('userView').classList.add('hide');
+                document.getElementById('adminPanel').classList.add('show');
+                loadAdminData();
+            }
+        });
+
         async function loadAdminData() {
             await loadDashboardStats();
             await loadAppTitle();
+            await loadCategories();
+            await loadStoryManagement();
+            await loadUserManagement();
             await loadChannelSettings();
             await loadRequiredChannel();
             await loadZoneId();
             await loadSponsorTasks();
+            await loadSettings();
         }
 
         async function loadDashboardStats() {
             try {
                 const usersSnap = await db.collection('users').get();
-                document.getElementById('totalUsers').textContent = usersSnap.size;
+                document.getElementById('totalUsers').textContent = toBn(usersSnap.size);
                 let totalTokens = 0;
                 usersSnap.forEach(d => { totalTokens += d.data().tokens || 0; });
-                document.getElementById('totalTokens').textContent = totalTokens;
+                document.getElementById('totalTokens').textContent = toBn(totalTokens);
                 const storiesSnap = await db.collection('stories').get();
-                document.getElementById('totalStories').textContent = storiesSnap.size;
+                document.getElementById('totalStories').textContent = toBn(storiesSnap.size);
                 let totalDownloads = 0;
                 storiesSnap.forEach(d => { totalDownloads += d.data().downloadCount || 0; });
-                document.getElementById('totalDownloads').textContent = totalDownloads;
+                document.getElementById('totalDownloads').textContent = toBn(totalDownloads);
             } catch (e) {}
         }
 
@@ -434,11 +491,163 @@
             const status = document.getElementById('appTitleStatus');
             if (!title) { status.innerHTML = '<span class="status-error">⛔ টাইটেল দিন!</span>'; return; }
             try {
-                await db.collection('settings').doc('appTitle').set({ title: title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await db.collection('settings').doc('appTitle').set({ title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 status.innerHTML = '<span class="status-success">✅ টাইটেল সেভ হয়েছে!</span>';
                 document.getElementById('appTitle').textContent = title;
                 showToast('✅ টাইটেল সেভ!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
+        }
+
+        async function loadCategories() {
+            try {
+                const doc = await db.collection('settings').doc('categories').get();
+                const categories = doc.exists ? doc.data().list || [] : [];
+                const container = document.getElementById('categoryList');
+                if (categories.length === 0) {
+                    container.innerHTML = '<p style="color:#666;text-align:center;font-size:13px;">⚠️ কোনো ক্যাটাগরি নেই</p>';
+                } else {
+                    container.innerHTML = '';
+                    categories.forEach((cat, i) => {
+                        container.innerHTML += `<div class="category-item"><span>${cat}</span><button onclick="deleteCategory(${i})">🗑️</button></div>`;
+                    });
+                }
+                const filterBar = document.getElementById('filterBar');
+                filterBar.innerHTML = '<button class="filter-btn active" data-filter="all">সব</button>';
+                categories.forEach(cat => {
+                    filterBar.innerHTML += `<button class="filter-btn" data-filter="${cat}">${cat}</button>`;
+                });
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        loadStories(this.dataset.filter);
+                    });
+                });
+                const catSelect = document.getElementById('storyCategory');
+                catSelect.innerHTML = '';
+                if (categories.length === 0) {
+                    catSelect.innerHTML = '<option value="">— ক্যাটাগরি নেই —</option>';
+                } else {
+                    categories.forEach(cat => { catSelect.innerHTML += `<option>${cat}</option>`; });
+                }
+            } catch (e) {}
+        }
+
+        async function addCategory() {
+            const input = document.getElementById('newCategoryInput');
+            const cat = input.value.trim();
+            if (!cat) { alert('ক্যাটাগরির নাম দিন!'); return; }
+            try {
+                const doc = await db.collection('settings').doc('categories').get();
+                const categories = doc.exists ? doc.data().list || [] : [];
+                if (categories.includes(cat)) { alert('এই ক্যাটাগরি আগেই আছে!'); return; }
+                categories.push(cat);
+                await db.collection('settings').doc('categories').set({ list: categories }, { merge: true });
+                input.value = '';
+                loadCategories();
+                showToast('✅ ক্যাটাগরি যোগ!');
+            } catch (e) { alert('সমস্যা!'); }
+        }
+
+        async function deleteCategory(index) {
+            if (!confirm('এই ক্যাটাগরি ডিলিট করবেন?')) return;
+            try {
+                const doc = await db.collection('settings').doc('categories').get();
+                const categories = doc.data().list || [];
+                categories.splice(index, 1);
+                await db.collection('settings').doc('categories').set({ list: categories }, { merge: true });
+                loadCategories();
+                showToast('🗑️ ডিলিট!');
+            } catch (e) {}
+        }
+
+        async function loadStoryManagement() {
+            try {
+                const snapshot = await db.collection('stories').get();
+                const container = document.getElementById('storyManageList');
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color:#666;text-align:center;font-size:13px;">⚠️ কোনো গল্প নেই</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const s = doc.data();
+                    container.innerHTML += `
+                        <div class="task-row">
+                            <div class="task-info">
+                                <strong>${s.title}</strong>
+                                <span>✍️ ${s.author} | 🏷️ ${s.category || 'নেই'}</span>
+                                <span class="reward">🪙 ${toBn(s.cost || 5)}</span>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-delete" onclick="deleteStory('${doc.id}')">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {}
+        }
+
+        async function deleteStory(id) {
+            if (!confirm('এই গল্প ডিলিট করবেন?')) return;
+            try {
+                await db.collection('stories').doc(id).delete();
+                loadStoryManagement();
+                loadDashboardStats();
+                loadStories('all');
+                showToast('🗑️ ডিলিট!');
+            } catch (e) {}
+        }
+
+        let allUsers = [];
+        async function loadUserManagement() {
+            try {
+                const snapshot = await db.collection('users').get();
+                allUsers = [];
+                snapshot.forEach(doc => { allUsers.push({ id: doc.id, ...doc.data() }); });
+                renderUserList(allUsers);
+            } catch (e) {}
+        }
+
+        function renderUserList(users) {
+            const container = document.getElementById('userList');
+            if (users.length === 0) {
+                container.innerHTML = '<p style="color:#666;text-align:center;font-size:13px;">⚠️ কোনো ইউজার নেই</p>';
+                return;
+            }
+            container.innerHTML = '';
+            users.slice(0, 20).forEach(u => {
+                container.innerHTML += `
+                    <div class="user-row">
+                        <div class="user-info">
+                            <strong>${u.firstName || 'ইউজার'}</strong>
+                            <span>ID: ${u.id} | 🪙 ${toBn(u.tokens || 0)}</span>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-add-token" onclick="giveUserTokens('${u.id}', 10)">+10</button>
+                            <button class="btn-remove-token" onclick="giveUserTokens('${u.id}', -10)">-10</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function searchUsers() {
+            const query = document.getElementById('userSearchInput').value.toLowerCase();
+            const filtered = allUsers.filter(u => 
+                (u.firstName || '').toLowerCase().includes(query) ||
+                u.id.includes(query)
+            );
+            renderUserList(filtered);
+        }
+
+        async function giveUserTokens(userId, amount) {
+            try {
+                await db.collection('users').doc(userId).set({ tokens: firebase.firestore.FieldValue.increment(amount) }, { merge: true });
+                loadUserManagement();
+                loadDashboardStats();
+                showToast(`✅ ${amount > 0 ? '+' : ''}${amount} টোকেন!`);
+            } catch (e) { alert('সমস্যা!'); }
         }
 
         async function saveChannelSettings() {
@@ -447,7 +656,7 @@
             const status = document.getElementById('channelStatus');
             if (!channelId) { status.innerHTML = '<span class="status-error">⛔ চ্যানেল আইডি দিন!</span>'; return; }
             try {
-                await db.collection('settings').doc('telegram').set({ channelId: channelId, channelUsername: username || '', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await db.collection('settings').doc('telegram').set({ channelId, channelUsername: username || '', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 status.innerHTML = '<span class="status-success">✅ চ্যানেল সেভ হয়েছে!</span>';
                 showToast('✅ চ্যানেল সেভ!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
@@ -493,7 +702,7 @@
             const status = document.getElementById('zoneStatus');
             if (!zoneId) { status.innerHTML = '<span class="status-error">⛔ Zone ID দিন!</span>'; return; }
             try {
-                await db.collection('settings').doc('monetag').set({ zoneId: zoneId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await db.collection('settings').doc('monetag').set({ zoneId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 status.innerHTML = '<span class="status-success">✅ Zone ID সেভ হয়েছে!</span>';
                 showToast('✅ Zone ID সেভ!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
@@ -504,6 +713,35 @@
                 const doc = await db.collection('settings').doc('monetag').get();
                 if (doc.exists) document.getElementById('monetagZoneId').value = doc.data().zoneId || '';
             } catch (e) {}
+        }
+
+        async function loadSettings() {
+            try {
+                const doc = await db.collection('settings').doc('appSettings').get();
+                if (doc.exists) {
+                    const d = doc.data();
+                    document.getElementById('dailyBonusAmount').value = d.dailyBonus || 5;
+                    document.getElementById('tokenPerAd').value = d.tokenPerAd || 2;
+                    document.getElementById('maxDailyAds').value = d.maxDailyAds || 20;
+                }
+            } catch (e) {}
+        }
+
+        async function saveDailyBonus() {
+            const amount = parseInt(document.getElementById('dailyBonusAmount').value) || 5;
+            try {
+                await db.collection('settings').doc('appSettings').set({ dailyBonus: amount }, { merge: true });
+                showToast('✅ ডেইলি বোনাস সেভ!');
+            } catch (e) { alert('সমস্যা!'); }
+        }
+
+        async function saveAdSettings() {
+            const tokenPerAd = parseInt(document.getElementById('tokenPerAd').value) || 2;
+            const maxDailyAds = parseInt(document.getElementById('maxDailyAds').value) || 20;
+            try {
+                await db.collection('settings').doc('appSettings').set({ tokenPerAd, maxDailyAds }, { merge: true });
+                showToast('✅ অ্যাড সেটিংস সেভ!');
+            } catch (e) { alert('সমস্যা!'); }
         }
 
         async function loadSponsorTasks() {
@@ -522,7 +760,7 @@
                             <div class="task-info">
                                 <strong>${task.channelUsername}</strong>
                                 <span>${task.channelLink}</span>
-                                <span class="reward">🪙 ${task.reward}</span>
+                                <span class="reward">🪙 ${toBn(task.reward)}</span>
                                 <span style="color:${task.isActive ? '#00c853' : '#d32f2f'}; margin-left:6px;">${task.isActive ? '✅' : '❌'}</span>
                             </div>
                             <div class="task-actions">
@@ -545,7 +783,7 @@
             try {
                 const doc = await db.collection('settings').doc('sponsorTasks').get();
                 const tasks = doc.exists ? doc.data().tasks || [] : [];
-                tasks.push({ id: 'task_' + Date.now(), channelLink: link, channelUsername: username || 'নাম নেই', reward: reward, isActive: true, createdAt: new Date() });
+                tasks.push({ id: 'task_' + Date.now(), channelLink: link, channelUsername: username || 'নাম নেই', reward, isActive: true, createdAt: new Date() });
                 await db.collection('settings').doc('sponsorTasks').set({ tasks }, { merge: true });
                 document.getElementById('addTaskForm').style.display = 'none';
                 document.getElementById('newTaskLink').value = '';
@@ -583,15 +821,16 @@
             const author = document.getElementById('storyAuthor').value.trim();
             const category = document.getElementById('storyCategory').value;
             const cost = parseInt(document.getElementById('storyCost').value) || 5;
+            const duration = document.getElementById('storyDuration').value.trim() || '১০:০০';
             const status = document.getElementById('uploadStatus');
             if (!title || !author) { status.innerHTML = '<span class="status-error">⛔ শিরোনাম ও লেখক দিন!</span>'; return; }
+            if (!category) { status.innerHTML = '<span class="status-error">⛔ আগে ক্যাটাগরি যোগ করুন!</span>'; return; }
             try {
                 await db.collection('stories').add({
-                    title, author, category, cost,
+                    title, author, category, cost, duration,
                     coverLetter: title.charAt(0),
                     isAdult: true,
                     isActive: true,
-                    duration: '১০:০০',
                     downloadCount: 0,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
@@ -599,26 +838,39 @@
                 document.getElementById('storyTitle').value = '';
                 document.getElementById('storyAuthor').value = '';
                 document.getElementById('storyCost').value = '';
+                document.getElementById('storyDuration').value = '';
+                loadStoryManagement();
+                loadDashboardStats();
                 showToast('✅ গল্প আপলোড!');
             } catch (e) { status.innerHTML = '<span class="status-error">⛔ সমস্যা!</span>'; }
         }
 
-        const DEMO_STORIES = [
-            { id: 'story1', title: 'অধরা স্পর্শ', author: 'অনামিকা', category: 'ইরোটিক', cost: 5, coverLetter: 'অ', isAdult: true, duration: '১০:০০' },
-            { id: 'story2', title: 'প্রথম স্পর্শ', author: 'রুদ্র', category: 'রোমান্টিক', cost: 4, coverLetter: 'প', isAdult: true, duration: '০৮:৩০' },
-            { id: 'story3', title: 'নিষিদ্ধ ভালোবাসা', author: 'সায়রা', category: 'ডার্ক রোমান্স', cost: 6, coverLetter: 'ন', isAdult: true, duration: '১২:১৫' },
-            { id: 'story4', title: 'রাতের অন্ধকারে', author: 'অরিন্দম', category: 'থ্রিলার', cost: 5, coverLetter: 'র', isAdult: true, duration: '০৯:৪৫' },
-            { id: 'story5', title: 'মন খারাপের গল্প', author: 'শ্রেয়া', category: 'রোমান্টিক', cost: 3, coverLetter: 'ম', isAdult: false, duration: '০৭:২০' }
-        ];
-        let allStories = [...DEMO_STORIES];
+        let allStories = [];
         let downloadedStories = [];
+
+        async function loadStoriesFromFirestore() {
+            try {
+                const snapshot = await db.collection('stories').get();
+                allStories = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    allStories.push({
+                        id: doc.id, title: data.title, author: data.author,
+                        category: data.category, cost: data.cost || 5,
+                        coverLetter: data.coverLetter || data.title.charAt(0),
+                        isAdult: data.isAdult !== false,
+                        duration: data.duration || '১০:০০'
+                    });
+                });
+            } catch (e) { allStories = []; }
+        }
 
         async function loadStories(filter = 'all') {
             const container = document.getElementById('storyList');
             try { const userDoc = await db.collection('users').doc(getUserId()).get(); downloadedStories = userDoc.exists ? userDoc.data().downloadedStories || [] : []; } catch (e) { downloadedStories = []; }
             let filtered = filter === 'all' ? allStories : allStories.filter(s => s.category === filter);
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-book-open" style="font-size:50px; color:#2a2a4a; display:block; margin-bottom:12px;"></i><p>এই ক্যাটাগরিতে কোনো গল্প নেই</p></div>`;
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-book-open" style="font-size:50px; color:#2a2a4a; display:block; margin-bottom:12px;"></i><p>কোনো গল্প নেই</p></div>`;
                 return;
             }
             container.innerHTML = '';
@@ -628,24 +880,16 @@
                 card.className = 'story-card';
                 card.innerHTML = `
                     <div class="thumb">${story.coverLetter}${story.isAdult ? '<span class="age-badge">18+</span>' : ''}</div>
-                    <div class="info"><h3>${story.title}</h3><div class="author">✍️ ${story.author}</div><div class="meta"><span class="tag">${story.category}</span>${story.isAdult ? '<span class="tag adult">🔞 18+</span>' : ''}<span class="tag">🪙 ${story.cost}</span><span class="tag">⏱️ ${story.duration}</span></div></div>
+                    <div class="info"><h3>${story.title}</h3><div class="author">✍️ ${story.author}</div><div class="meta"><span class="tag">${story.category}</span>${story.isAdult ? '<span class="tag adult">🔞 18+</span>' : ''}<span class="tag">🪙 ${toBn(story.cost)}</span><span class="tag">⏱️ ${story.duration}</span></div></div>
                     <div class="actions">${isDownloaded ? `<span class="downloaded-badge">✅ ডাউনলোড</span>` : `<button class="download-btn" onclick="openSpendModal('${story.id}')">⬇️ ডাউনলোড</button>`}</div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                loadStories(this.dataset.filter);
-            });
-        });
-
         async function getUserTokens() { try { const doc = await db.collection('users').doc(getUserId()).get(); return doc.exists ? doc.data().tokens || 0 : 0; } catch (e) { return 0; } }
         async function spendTokens(amount) { const ref = db.collection('users').doc(getUserId()); const doc = await ref.get(); const current = doc.exists ? doc.data().tokens || 0 : 0; if (current < amount) return false; await ref.update({ tokens: firebase.firestore.FieldValue.increment(-amount) }); return true; }
-        async function updateUI() { const tokens = await getUserTokens(); document.getElementById('tokenDisplay').textContent = tokens; }
+        async function updateUI() { const tokens = await getUserTokens(); document.getElementById('tokenDisplay').textContent = toBn(tokens); }
 
         window.openSpendModal = async function(storyId) {
             const story = allStories.find(s => s.id === storyId);
@@ -654,16 +898,16 @@
             document.getElementById('modalThumb').textContent = story.coverLetter;
             document.getElementById('modalTitle').textContent = story.title;
             document.getElementById('modalAuthor').textContent = `✍️ ${story.author}`;
-            document.getElementById('modalCost').textContent = story.cost;
-            document.getElementById('modalBalance').textContent = tokens;
+            document.getElementById('modalCost').textContent = toBn(story.cost);
+            document.getElementById('modalBalance').textContent = toBn(tokens);
             const confirmBtn = document.getElementById('modalConfirmBtn');
             if (tokens >= story.cost) {
-                confirmBtn.textContent = `⬇️ ${story.cost} টোকেন খরচ করুন`;
+                confirmBtn.textContent = `⬇️ ${toBn(story.cost)} টোকেন খরচ করুন`;
                 confirmBtn.style.background = 'linear-gradient(135deg, #f7971e, #ffd200)';
                 confirmBtn.style.color = '#0a0a14';
                 confirmBtn.onclick = () => confirmDownload(storyId);
             } else {
-                confirmBtn.textContent = `⛔ টোকেন কম (${tokens}/${story.cost})`;
+                confirmBtn.textContent = `⛔ টোকেন কম (${toBn(tokens)}/${toBn(story.cost)})`;
                 confirmBtn.style.background = '#d32f2f66';
                 confirmBtn.style.color = '#ff6b6b';
                 confirmBtn.onclick = () => { closeModal('spendModal'); showNoTokenModal(story.cost - tokens); };
@@ -678,6 +922,7 @@
             if (success) {
                 const ref = db.collection('users').doc(getUserId());
                 await ref.update({ downloadedStories: firebase.firestore.FieldValue.arrayUnion(storyId) }, { merge: true });
+                await db.collection('stories').doc(storyId).update({ downloadCount: firebase.firestore.FieldValue.increment(1) });
                 closeModal('spendModal');
                 showToast(`✅ "${story.title}" ডাউনলোড হয়েছে!`);
                 await updateUI();
@@ -686,7 +931,7 @@
         };
 
         window.closeModal = function(id) { document.getElementById(id).classList.remove('show'); };
-        function showNoTokenModal(need) { document.getElementById('noTokenCurrent').textContent = '০'; document.getElementById('noTokenNeed').textContent = need; document.getElementById('noTokenModal').classList.add('show'); }
+        function showNoTokenModal(need) { document.getElementById('noTokenCurrent').textContent = '০'; document.getElementById('noTokenNeed').textContent = toBn(need); document.getElementById('noTokenModal').classList.add('show'); }
 
         let isPlaying = false, currentPlayingStory = null;
         window.togglePlay = function() { if (!currentPlayingStory) return; isPlaying = !isPlaying; document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️' : '▶️'; };
@@ -701,8 +946,11 @@
         function showToast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._timer); el._timer = setTimeout(() => el.classList.remove('show'), 2800); }
 
         async function init() {
+            await ensureUserExists();
             await loadAppTitle();
             await updateUI();
+            await loadStoriesFromFirestore();
+            await loadCategories();
             loadStories('all');
             if (window.Telegram?.WebApp) { window.Telegram.WebApp.ready(); window.Telegram.WebApp.expand(); }
             console.log('✅ Audio App + Admin Ready!');
